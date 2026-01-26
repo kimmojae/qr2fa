@@ -1,0 +1,49 @@
+# Binaries
+qr2fa
+mfa
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.a
+
+# Build artifacts
+dist/
+*.tmp
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Local data (for testing)
+.mfa/
+.qr2fa/
+accounts.json
+accounts.encrypted
+
+docs
+
+.claude/
+CLAUDE.md
