@@ -78,7 +78,7 @@ func init() {
 	showCmd.Flags().StringVarP(&showSave, "save", "s", "", "Save QR code to PNG file")
 }
 
-// displayQRInline displays QR code as inline image in terminal (iTerm2/WezTerm protocol)
+// displayQRInline displays QR code as inline image in terminal (iTerm2/WezTerm/Kitty/Ghostty protocol)
 func displayQRInline(content string) error {
 	// Create temporary PNG file with small size
 	tmpFile, err := os.CreateTemp("", "mfa-qr-*.png")
@@ -100,11 +100,50 @@ func displayQRInline(content string) error {
 		return err
 	}
 
-	// Encode to base64
+	// Detect terminal type and use appropriate protocol
+	termProgram := os.Getenv("TERM_PROGRAM")
+	term := os.Getenv("TERM")
+
+	// Try Kitty protocol for Ghostty and Kitty terminals
+	if termProgram == "ghostty" || term == "xterm-kitty" {
+		return displayKittyImage(data)
+	}
+
+	// Use iTerm2 protocol for iTerm2 and WezTerm
+	if termProgram == "iTerm.app" || termProgram == "WezTerm" {
+		return displayITerm2Image(data)
+	}
+
+	// Try both protocols as fallback
+	// First try Kitty (more widely supported in modern terminals)
+	if err := displayKittyImage(data); err == nil {
+		return nil
+	}
+
+	// Fall back to iTerm2 protocol
+	return displayITerm2Image(data)
+}
+
+// displayKittyImage displays image using Kitty graphics protocol
+func displayKittyImage(data []byte) error {
 	encoded := base64.StdEncoding.EncodeToString(data)
 
-	// Display using iTerm2 inline image protocol
-	// width=20 means 20 character cells wide (adjust for size)
+	// Kitty graphics protocol
+	// a=T: transmit and display
+	// f=100: PNG format
+	// t=d: direct transmission (base64)
+	// C=1: cursor movement after image
+	fmt.Printf("\033_Ga=T,f=100,t=d;%s\033\\\n", encoded)
+
+	return nil
+}
+
+// displayITerm2Image displays image using iTerm2 inline image protocol
+func displayITerm2Image(data []byte) error {
+	encoded := base64.StdEncoding.EncodeToString(data)
+
+	// iTerm2 inline image protocol
+	// width=20 means 20 character cells wide
 	fmt.Printf("\033]1337;File=inline=1;width=20;preserveAspectRatio=1:%s\a\n", encoded)
 
 	return nil

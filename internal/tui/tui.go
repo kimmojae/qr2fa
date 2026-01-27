@@ -143,11 +143,11 @@ func (m *Model) View() string {
 
 	// Title
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("99"))
-	s.WriteString(titleStyle.Render("MFA Code Tool") + "\n\n")
+	s.WriteString(titleStyle.Render("qr2fa") + "\n\n")
 
 	// Search bar
 	searchStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
-	s.WriteString(searchStyle.Render("🔍 Search: ") + m.searchText + "\n\n")
+	s.WriteString(searchStyle.Render("Search: ") + m.searchText + "\n\n")
 
 	// Accounts list
 	if len(m.filteredAccs) == 0 {
