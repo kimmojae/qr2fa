@@ -86,11 +86,11 @@ var qrCaptureCmd = &cobra.Command{
 			return fmt.Errorf("failed to parse QR code: %w", err)
 		}
 
-		fmt.Fprintf(cmd.ErrOrStderr(), "✓ Detected: %s", acc.Name)
 		if acc.Issuer != "" {
-			fmt.Fprintf(cmd.ErrOrStderr(), " (%s)", acc.Issuer)
+			fmt.Fprintf(cmd.ErrOrStderr(), "✓ Detected: %s - %s\n", acc.Issuer, acc.Name)
+		} else {
+			fmt.Fprintf(cmd.ErrOrStderr(), "✓ Detected: %s\n", acc.Name)
 		}
-		fmt.Fprintln(cmd.ErrOrStderr())
 
 		// Prompt for name confirmation
 		fmt.Fprintf(cmd.ErrOrStderr(), "Name [%s]: ", acc.Name)
@@ -100,9 +100,14 @@ var qrCaptureCmd = &cobra.Command{
 		}
 
 		// Prompt for tag
-		fmt.Fprint(cmd.ErrOrStderr(), "Tag [dev/prod/staging/personal]: ")
+		fmt.Fprint(cmd.ErrOrStderr(), "Tag [dev/prod/...]: ")
 		tag := readLine()
 		acc.Tag = strings.ToLower(strings.TrimSpace(tag))
+
+		// Check for duplicate secret
+		if existing := st.FindBySecret(acc.Secret); existing != nil {
+			return fmt.Errorf("이미 동일한 시크릿의 계정이 존재합니다: %s", existing.DisplayName())
+		}
 
 		// Add account
 		if err := st.Add(acc); err != nil {
@@ -133,9 +138,10 @@ func handleMigration(cmd *cobra.Command, st *account.Storage, content string) er
 	fmt.Fprintf(cmd.ErrOrStderr(), "✓ Detected Google Authenticator migration (%d accounts)\n", len(accounts))
 	fmt.Fprintln(cmd.ErrOrStderr(), "Importing:")
 	for i, acc := range accounts {
-		fmt.Fprintf(cmd.ErrOrStderr(), "  %d. %s", i+1, acc.Name)
 		if acc.Issuer != "" {
-			fmt.Fprintf(cmd.ErrOrStderr(), " (%s)", acc.Issuer)
+			fmt.Fprintf(cmd.ErrOrStderr(), "  %d. %s - %s", i+1, acc.Issuer, acc.Name)
+		} else {
+			fmt.Fprintf(cmd.ErrOrStderr(), "  %d. %s", i+1, acc.Name)
 		}
 		fmt.Fprintln(cmd.ErrOrStderr())
 	}
@@ -143,15 +149,23 @@ func handleMigration(cmd *cobra.Command, st *account.Storage, content string) er
 	// Add accounts one by one with individual tag prompts
 	fmt.Fprintln(cmd.ErrOrStderr())
 	added := 0
+	skipped := 0
 	for i, acc := range accounts {
-		fmt.Fprintf(cmd.ErrOrStderr(), "Account %d/%d: %s", i+1, len(accounts), acc.Name)
-		if acc.Issuer != "" {
-			fmt.Fprintf(cmd.ErrOrStderr(), " (%s)", acc.Issuer)
+		// Check for duplicate secret
+		if existing := st.FindBySecret(acc.Secret); existing != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "  ⏭ 이미 등록됨: %s\n", existing.DisplayName())
+			skipped++
+			continue
 		}
-		fmt.Fprintln(cmd.ErrOrStderr())
+
+		if acc.Issuer != "" {
+			fmt.Fprintf(cmd.ErrOrStderr(), "Account %d/%d: %s - %s\n", i+1, len(accounts), acc.Issuer, acc.Name)
+		} else {
+			fmt.Fprintf(cmd.ErrOrStderr(), "Account %d/%d: %s\n", i+1, len(accounts), acc.Name)
+		}
 
 		// Prompt for tag
-		fmt.Fprint(cmd.ErrOrStderr(), "Tag [dev/prod/staging/personal]: ")
+		fmt.Fprint(cmd.ErrOrStderr(), "Tag [dev/prod/...]: ")
 		tag := strings.ToLower(strings.TrimSpace(readLine()))
 		acc.Tag = tag
 
@@ -168,7 +182,11 @@ func handleMigration(cmd *cobra.Command, st *account.Storage, content string) er
 	}
 
 	fmt.Fprintln(cmd.ErrOrStderr())
-	fmt.Fprintf(cmd.ErrOrStderr(), "✓ %d accounts added successfully\n", added)
+	if skipped > 0 {
+		fmt.Fprintf(cmd.ErrOrStderr(), "✓ %d accounts added, %d skipped (duplicate)\n", added, skipped)
+	} else {
+		fmt.Fprintf(cmd.ErrOrStderr(), "✓ %d accounts added successfully\n", added)
+	}
 
 	return nil
 }

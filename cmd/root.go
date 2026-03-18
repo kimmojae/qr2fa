@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -190,6 +191,21 @@ func promptDataDirWithMessage(isFirstTime bool) (string, error) {
 	default:
 		return "", fmt.Errorf("잘못된 선택입니다")
 	}
+}
+
+// findAccountByID finds an account by its permanent ID
+func findAccountByID(st *account.Storage, idStr string) (*account.Account, error) {
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return nil, fmt.Errorf("'%s'은(는) 유효한 번호가 아닙니다. 'qr2fa list'에서 번호를 확인하세요", idStr)
+	}
+
+	acc := st.FindByID(id)
+	if acc == nil {
+		return nil, fmt.Errorf("번호 %d에 해당하는 계정을 찾을 수 없습니다. 'qr2fa list'에서 확인하세요", id)
+	}
+
+	return acc, nil
 }
 
 // runInteractiveTUI launches the interactive TUI

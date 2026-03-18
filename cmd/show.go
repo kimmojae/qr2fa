@@ -17,13 +17,11 @@ var (
 
 // showCmd represents the show command
 var showCmd = &cobra.Command{
-	Use:   "show <account-name>",
+	Use:   "show <number>",
 	Short: "Show QR code for an account",
-	Long:  `Display the QR code for an account in the terminal, or save it as a PNG file.`,
+	Long:  `Display the QR code for an account in the terminal, or save it as a PNG file. Use the account number from 'qr2fa list'.`,
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		accountName := args[0]
-
 		if err := initStorage(); err != nil {
 			return err
 		}
@@ -33,9 +31,9 @@ var showCmd = &cobra.Command{
 			return fmt.Errorf("failed to load storage: %w", err)
 		}
 
-		acc := st.FindByName(accountName)
-		if acc == nil {
-			return fmt.Errorf("account '%s' not found", accountName)
+		acc, err := findAccountByID(st, args[0])
+		if err != nil {
+			return err
 		}
 
 		// Generate otpauth URL

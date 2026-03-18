@@ -15,13 +15,11 @@ var (
 
 // getCmd represents the get command
 var getCmd = &cobra.Command{
-	Use:   "get <account-name>",
+	Use:   "get <number>",
 	Short: "Get TOTP code for an account",
-	Long:  `Get the current TOTP code for a specific account and copy it to clipboard.`,
+	Long:  `Get the current TOTP code for a specific account and copy it to clipboard. Use the account number from 'qr2fa list'.`,
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		accountName := args[0]
-
 		if err := initStorage(); err != nil {
 			return err
 		}
@@ -31,9 +29,9 @@ var getCmd = &cobra.Command{
 			return fmt.Errorf("failed to load storage: %w", err)
 		}
 
-		acc := st.FindByName(accountName)
-		if acc == nil {
-			return fmt.Errorf("account '%s' not found", accountName)
+		acc, err := findAccountByID(st, args[0])
+		if err != nil {
+			return err
 		}
 
 		code, err := totp.Generate(acc)

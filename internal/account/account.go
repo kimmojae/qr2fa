@@ -7,13 +7,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 // Account represents a single MFA account
 type Account struct {
-	ID        string    `json:"id"`
+	ID        int       `json:"id"`
 	Name      string    `json:"name"`
 	Issuer    string    `json:"issuer"`
 	Secret    string    `json:"secret"`
@@ -27,6 +25,7 @@ type Account struct {
 // Storage represents the encrypted storage structure
 type Storage struct {
 	Version  string     `json:"version"`
+	NextID   int        `json:"nextId"`
 	Accounts []*Account `json:"accounts"`
 }
 
@@ -45,7 +44,7 @@ func NewAccount(name, issuer, secret, tag string) (*Account, error) {
 	}
 
 	return &Account{
-		ID:        uuid.New().String(),
+		ID:        0,
 		Name:      name,
 		Issuer:    issuer,
 		Secret:    secret,
@@ -128,7 +127,7 @@ func ParseOTPAuthURL(urlStr string) (*Account, error) {
 	}
 
 	return &Account{
-		ID:        uuid.New().String(),
+		ID:        0,
 		Name:      name,
 		Issuer:    issuer,
 		Secret:    secret,
@@ -174,17 +173,18 @@ func (a *Account) ToOTPAuthURL() string {
 	return u.String()
 }
 
-// DisplayName returns a formatted display name in the format: Name (Issuer) [Tag]
+// DisplayName returns a formatted display name in the format: Issuer [Tag] Name
 func (a *Account) DisplayName() string {
 	issuer := a.Issuer
 	if issuer == "" {
 		issuer = "n/a"
 	}
 
-	display := fmt.Sprintf("%s (%s)", a.Name, issuer)
+	display := issuer
 	if a.Tag != "" {
 		display = fmt.Sprintf("%s [%s]", display, a.Tag)
 	}
+	display = fmt.Sprintf("%s %s", display, a.Name)
 	return display
 }
 
@@ -194,6 +194,20 @@ func NewStorage() *Storage {
 		Version:  "1.0",
 		Accounts: []*Account{},
 	}
+}
+
+// MigrateIDs assigns auto-increment IDs to any accounts with ID 0 (legacy UUID data).
+// Call this after loading storage to ensure all accounts have valid IDs.
+func (s *Storage) MigrateIDs() bool {
+	migrated := false
+	for _, acc := range s.Accounts {
+		if acc.ID == 0 {
+			s.NextID++
+			acc.ID = s.NextID
+			migrated = true
+		}
+	}
+	return migrated
 }
 
 // FindByName finds an account by name (case-insensitive)
@@ -208,7 +222,7 @@ func (s *Storage) FindByName(name string) *Account {
 }
 
 // FindByID finds an account by ID
-func (s *Storage) FindByID(id string) *Account {
+func (s *Storage) FindByID(id int) *Account {
 	for _, acc := range s.Accounts {
 		if acc.ID == id {
 			return acc
@@ -229,6 +243,10 @@ func (s *Storage) Add(account *Account) error {
 			counter++
 		}
 	}
+
+	// Assign auto-increment ID
+	s.NextID++
+	account.ID = s.NextID
 
 	s.Accounts = append(s.Accounts, account)
 	return nil
@@ -263,7 +281,18 @@ func (s *Storage) Update(account *Account) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("account with ID %s not found", account.ID)
+	return fmt.Errorf("account with ID %d not found", account.ID)
+}
+
+// FindBySecret finds an account by secret (case-insensitive, ignoring padding)
+func (s *Storage) FindBySecret(secret string) *Account {
+	normalizedSecret := strings.ToUpper(strings.TrimRight(secret, "="))
+	for _, acc := range s.Accounts {
+		if strings.ToUpper(strings.TrimRight(acc.Secret, "=")) == normalizedSecret {
+			return acc
+		}
+	}
+	return nil
 }
 
 // FilterByTag returns accounts with the specified tag

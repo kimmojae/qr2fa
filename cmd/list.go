@@ -8,8 +8,34 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
+	"github.com/kimmojae/qr2fa/internal/account"
 	"github.com/kimmojae/qr2fa/internal/totp"
 )
+
+var tagColors = map[string]lipgloss.Color{
+	"dev":  lipgloss.Color("12"), // Blue
+	"prod": lipgloss.Color("9"),  // Red
+}
+
+func formatAccountDisplay(acc *account.Account) string {
+	issuer := acc.Issuer
+	if issuer == "" {
+		issuer = "n/a"
+	}
+
+	display := issuer
+	if acc.Tag != "" {
+		color, ok := tagColors[acc.Tag]
+		if !ok {
+			color = lipgloss.Color("14") // Cyan for unknown tags
+		}
+		tagStyle := lipgloss.NewStyle().Foreground(color)
+		display = fmt.Sprintf("%s %s", display, tagStyle.Render("["+acc.Tag+"]"))
+	}
+
+	display = fmt.Sprintf("%-28s %s", display, acc.Name)
+	return display
+}
 
 var (
 	listTag string
@@ -44,16 +70,56 @@ var listCmd = &cobra.Command{
 			return nil
 		}
 
-		// Sort by name
+		// Sort by issuer then name for display
 		sort.Slice(accounts, func(i, j int) bool {
+			if accounts[i].Issuer != accounts[j].Issuer {
+				return strings.ToLower(accounts[i].Issuer) < strings.ToLower(accounts[j].Issuer)
+			}
 			return strings.ToLower(accounts[i].Name) < strings.ToLower(accounts[j].Name)
 		})
 
-		// Print accounts
+		if listTag != "" {
+			var filtered []*account.Account
+			for _, acc := range accounts {
+				if strings.EqualFold(acc.Tag, listTag) {
+					filtered = append(filtered, acc)
+				}
+			}
+			accounts = filtered
+		}
+
+		// Print accounts grouped by issuer
+		issuerStyle := lipgloss.NewStyle().Bold(true)
+		currentIssuer := ""
 		for _, acc := range accounts {
+			issuer := acc.Issuer
+			if issuer == "" {
+				issuer = "n/a"
+			}
+
+			// Print issuer header when group changes
+			if issuer != currentIssuer {
+				if currentIssuer != "" {
+					fmt.Println() // blank line between groups
+				}
+				fmt.Println(issuerStyle.Render(issuer))
+				currentIssuer = issuer
+			}
+
+			// Format tag
+			tagStr := ""
+			if acc.Tag != "" {
+				color, ok := tagColors[acc.Tag]
+				if !ok {
+					color = lipgloss.Color("14")
+				}
+				tagStyle := lipgloss.NewStyle().Foreground(color)
+				tagStr = tagStyle.Render("["+acc.Tag+"]") + " "
+			}
+
 			code, err := totp.Generate(acc)
 			if err != nil {
-				fmt.Printf("%-30s ERROR\n", acc.DisplayName())
+				fmt.Printf("  #%-2d %s%-20s ERROR\n", acc.ID, tagStr, acc.Name)
 				continue
 			}
 
@@ -70,7 +136,7 @@ var listCmd = &cobra.Command{
 				codeStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("9")) // Red
 			}
 
-			fmt.Printf("%-30s %s  (%ds)\n", acc.DisplayName(), codeStyle.Render(formattedCode), remaining)
+			fmt.Printf("  #%-2d %s%-20s %s  (%ds)\n", acc.ID, tagStr, acc.Name, codeStyle.Render(formattedCode), remaining)
 		}
 
 		return nil
@@ -79,5 +145,5 @@ var listCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(listCmd)
-	listCmd.Flags().StringVarP(&listTag, "tag", "t", "", "Filter by tag (dev/prod/staging/personal)")
+	listCmd.Flags().StringVarP(&listTag, "tag", "t", "", "Filter by tag (dev/prod/...)")
 }

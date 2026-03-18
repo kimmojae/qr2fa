@@ -9,13 +9,11 @@ import (
 
 // editCmd represents the edit command
 var editCmd = &cobra.Command{
-	Use:   "edit <account-name>",
-	Short: "Edit an MFA account",
-	Long:  `Edit an existing MFA account (name and tag).`,
+	Use:   "edit <number>",
+	Short: "Edit an MFA account's tag",
+	Long:  `Edit the tag of an existing MFA account. Use the account number from 'qr2fa list'.`,
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		accountName := args[0]
-
 		if err := initStorage(); err != nil {
 			return err
 		}
@@ -25,25 +23,20 @@ var editCmd = &cobra.Command{
 			return fmt.Errorf("failed to load storage: %w", err)
 		}
 
-		// Find account
-		acc := st.FindByName(accountName)
-		if acc == nil {
-			return fmt.Errorf("account '%s' not found", accountName)
+		// Find account by number
+		acc, err := findAccountByID(st, args[0])
+		if err != nil {
+			return err
 		}
 
-		// Prompt for new name
-		fmt.Fprintf(cmd.ErrOrStderr(), "Name [%s]: ", acc.Name)
-		name := readLine()
-		if name != "" {
-			// Check if new name already exists
-			if existing := st.FindByName(name); existing != nil && existing.ID != acc.ID {
-				return fmt.Errorf("account with name '%s' already exists", name)
-			}
-			acc.Name = name
-		}
+		fmt.Fprintf(cmd.ErrOrStderr(), "Account: %s\n", acc.DisplayName())
 
 		// Prompt for new tag
-		fmt.Fprintf(cmd.ErrOrStderr(), "Tag [%s]: ", acc.Tag)
+		currentTag := acc.Tag
+		if currentTag == "" {
+			currentTag = "(없음)"
+		}
+		fmt.Fprintf(cmd.ErrOrStderr(), "Tag [%s]: ", currentTag)
 		tag := readLine()
 		if tag != "" {
 			acc.Tag = strings.ToLower(strings.TrimSpace(tag))
@@ -54,7 +47,7 @@ var editCmd = &cobra.Command{
 			return fmt.Errorf("failed to save storage: %w", err)
 		}
 
-		fmt.Fprintf(cmd.ErrOrStderr(), "✓ Account '%s' updated successfully\n", acc.Name)
+		fmt.Fprintf(cmd.ErrOrStderr(), "✓ Account '%s' updated successfully\n", acc.DisplayName())
 		return nil
 	},
 }

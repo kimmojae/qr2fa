@@ -42,7 +42,7 @@ var addCmd = &cobra.Command{
 			}
 
 			// Still prompt for tag
-			fmt.Print("Tag [dev/prod/staging/personal]: ")
+			fmt.Print("Tag [dev/prod/...]: ")
 			tag := readLine()
 			acc.Tag = strings.ToLower(strings.TrimSpace(tag))
 		} else if addQRFile != "" {
@@ -58,14 +58,14 @@ var addCmd = &cobra.Command{
 				return fmt.Errorf("failed to parse QR code: %w", err)
 			}
 
-			fmt.Fprintf(cmd.ErrOrStderr(), "✓ Detected: %s", acc.Name)
 			if acc.Issuer != "" {
-				fmt.Fprintf(cmd.ErrOrStderr(), " (%s)", acc.Issuer)
+				fmt.Fprintf(cmd.ErrOrStderr(), "✓ Detected: %s - %s\n", acc.Issuer, acc.Name)
+			} else {
+				fmt.Fprintf(cmd.ErrOrStderr(), "✓ Detected: %s\n", acc.Name)
 			}
-			fmt.Fprintln(cmd.ErrOrStderr())
 
 			// Prompt for tag
-			fmt.Fprint(cmd.ErrOrStderr(), "Tag [dev/prod/staging/personal]: ")
+			fmt.Fprint(cmd.ErrOrStderr(), "Tag [dev/prod/...]: ")
 			tag := readLine()
 			acc.Tag = strings.ToLower(strings.TrimSpace(tag))
 		} else {
@@ -74,6 +74,11 @@ var addCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
+		}
+
+		// Check for duplicate secret
+		if existing := st.FindBySecret(acc.Secret); existing != nil {
+			return fmt.Errorf("이미 동일한 시크릿의 계정이 존재합니다: %s", existing.DisplayName())
 		}
 
 		// Add account to storage
@@ -117,7 +122,7 @@ func promptForAccount() (*account.Account, error) {
 	}
 
 	// Tag
-	fmt.Print("Tag [dev/prod/staging/personal]: ")
+	fmt.Print("Tag [dev/prod/...]: ")
 	tag := readLine()
 	tag = strings.ToLower(strings.TrimSpace(tag))
 

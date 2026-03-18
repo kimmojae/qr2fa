@@ -8,12 +8,11 @@ import (
 
 // renameCmd represents the rename command
 var renameCmd = &cobra.Command{
-	Use:   "rename <old-name> <new-name>",
+	Use:   "rename <number> <new-name>",
 	Short: "Rename an MFA account",
-	Long:  `Rename an existing MFA account.`,
+	Long:  `Rename an existing MFA account. Use the account number from 'qr2fa list'.`,
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		oldName := args[0]
 		newName := args[1]
 
 		if err := initStorage(); err != nil {
@@ -25,18 +24,13 @@ var renameCmd = &cobra.Command{
 			return fmt.Errorf("failed to load storage: %w", err)
 		}
 
-		// Find account
-		acc := st.FindByName(oldName)
-		if acc == nil {
-			return fmt.Errorf("account '%s' not found", oldName)
+		// Find account by number
+		acc, err := findAccountByID(st, args[0])
+		if err != nil {
+			return err
 		}
 
-		// Check if new name already exists
-		if st.FindByName(newName) != nil {
-			return fmt.Errorf("account with name '%s' already exists", newName)
-		}
-
-		// Update name
+		oldName := acc.Name
 		acc.Name = newName
 
 		// Save storage

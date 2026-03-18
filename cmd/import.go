@@ -40,7 +40,7 @@ var importCmd = &cobra.Command{
 		skipped := 0
 		for _, acc := range importedSt.Accounts {
 			// Check for duplicates
-			if st.FindByName(acc.Name) != nil {
+			if st.FindBySecret(acc.Secret) != nil {
 				if importMerge {
 					skipped++
 					continue

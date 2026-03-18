@@ -89,6 +89,13 @@ func (m *Manager) Load() (*account.Storage, error) {
 		return nil, fmt.Errorf("failed to parse storage: %w", err)
 	}
 
+	// Migrate legacy accounts (UUID or missing IDs) to auto-increment IDs
+	if storage.MigrateIDs() {
+		if err := m.Save(&storage); err != nil {
+			return nil, fmt.Errorf("failed to save migrated storage: %w", err)
+		}
+	}
+
 	return &storage, nil
 }
 
