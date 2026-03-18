@@ -275,13 +275,14 @@ func (m *Model) View() string {
 
 	s.WriteString("\n")
 
-	// Title
+	// Title + view mode
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("99"))
-	dimStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
-	s.WriteString(titleStyle.Render("qr2fa") + "\n\n")
+	dimStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+	keyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Bold(true)
+	s.WriteString(titleStyle.Render("QR2FA") + " " + dimStyle.Render("v0.1.0") + "\n\n")
 
 	// Search bar
-	s.WriteString(dimStyle.Render("Search: ") + m.searchText + "\n\n")
+	s.WriteString(keyStyle.Render("Search:") + " " + m.searchText + "\n\n")
 
 	if len(m.items) == 0 {
 		s.WriteString("No accounts found.\n")
@@ -393,12 +394,26 @@ func (m *Model) View() string {
 	}
 
 	// Help
-	helpStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	helpKeyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Bold(true)
+	helpDescStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+
+	var helpParts []string
 	if m.mode == viewFolder {
-		s.WriteString("\n" + helpStyle.Render("[↑↓] Navigate  [Enter/Space] Open/Copy  [Tab] View  [q] Quit"))
+		helpParts = []string{
+			helpKeyStyle.Render("[↑↓]") + helpDescStyle.Render(" Navigate"),
+			helpKeyStyle.Render("[Enter/Space]") + helpDescStyle.Render(" Open/Copy"),
+			helpKeyStyle.Render("[Tab]") + helpDescStyle.Render(" View"),
+			helpKeyStyle.Render("[q]") + helpDescStyle.Render(" Quit"),
+		}
 	} else {
-		s.WriteString("\n" + helpStyle.Render("[↑↓] Navigate  [Enter] Copy  [Tab] View  [q] Quit"))
+		helpParts = []string{
+			helpKeyStyle.Render("[↑↓]") + helpDescStyle.Render(" Navigate"),
+			helpKeyStyle.Render("[Enter]") + helpDescStyle.Render(" Copy"),
+			helpKeyStyle.Render("[Tab]") + helpDescStyle.Render(" View"),
+			helpKeyStyle.Render("[q]") + helpDescStyle.Render(" Quit"),
+		}
 	}
+	s.WriteString("\n" + strings.Join(helpParts, "  "))
 
 	return s.String()
 }
