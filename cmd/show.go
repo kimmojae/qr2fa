@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
 	"github.com/kimmojae/qr2fa/internal/qr"
-	"github.com/kimmojae/qr2fa/internal/totp"
 )
 
 var (
@@ -48,8 +48,31 @@ var showCmd = &cobra.Command{
 			return nil
 		}
 
-		// Display in terminal
-		fmt.Printf("\n%s\n\n", acc.DisplayName())
+		// Display account info
+		labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+		dimStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+
+		fmt.Println()
+		fmt.Printf("%s %d\n", labelStyle.Render("ID:"), acc.ID)
+		fmt.Printf("%s %s\n", labelStyle.Render("Issuer:"), acc.Issuer)
+		fmt.Printf("%s %s\n", labelStyle.Render("Name:"), acc.Name)
+		if acc.Tag != "" {
+			tagColors := map[string]lipgloss.Color{
+				"dev":  lipgloss.Color("12"),
+				"prod": lipgloss.Color("9"),
+			}
+			color, ok := tagColors[acc.Tag]
+			if !ok {
+				color = lipgloss.Color("14")
+			}
+			fmt.Printf("%s %s\n", labelStyle.Render("Tag:"), lipgloss.NewStyle().Foreground(color).Render(acc.Tag))
+		}
+		fmt.Printf("%s %s\n", labelStyle.Render("Secret:"), acc.Secret)
+
+		// QR Code section
+		fmt.Println()
+		fmt.Println(dimStyle.Render("── QR Code ──"))
+		fmt.Println()
 
 		// Try to display as inline image (for WezTerm, iTerm2, etc.)
 		if err := displayQRInline(url); err != nil {
@@ -58,14 +81,7 @@ var showCmd = &cobra.Command{
 				return fmt.Errorf("failed to generate QR code: %w", err)
 			}
 		}
-
-		// Show current code and secret
-		code, _ := totp.Generate(acc)
-		remaining := totp.RemainingSeconds(acc)
-		formattedCode := totp.FormatCode(code)
-
-		fmt.Printf("\nCode: %s  (%ds remaining)\n", formattedCode, remaining)
-		fmt.Printf("Secret: %s\n\n", acc.Secret)
+		fmt.Println()
 
 		return nil
 	},

@@ -1,15 +1,15 @@
-# qr2fa
+# QR2FA
 
-터미널에서 사용하는 TOTP MFA 인증 관리 도구. QR 캡처와 클라우드 동기화 지원.
+터미널에서 사용하는 TOTP MFA 인증 관리 도구. QR 캡처와 Google Authenticator 마이그레이션 지원.
 
 ## 주요 기능
 
-- 🎨 **Interactive TUI** - 실시간 코드 갱신 및 검색
+- 🎨 **Interactive TUI** - 실시간 코드 갱신, 폴더 뷰, 검색
 - 📸 **QR 캡처** - 화면에서 직접 QR 코드 캡처 (macOS)
 - 🔄 **Google Authenticator 마이그레이션** - 한 번에 여러 계정 가져오기
-- ☁️ **클라우드 동기화** - iCloud Drive / Dropbox / Google Drive 지원
-- ⚡ **빠른 접근** - 클립보드 자동 복사
-- 🏷️ **태그 관리** - dev/prod/staging/personal 환경별 분류
+- 📂 **유연한 저장 경로** - iCloud Drive, Dropbox 등 원하는 경로 지정
+- ⚡ **빠른 접근** - 번호 기반 조회 & 클립보드 자동 복사
+- 🏷️ **태그 관리** - dev/prod 등 환경별 분류
 
 ## 설치
 
@@ -33,20 +33,23 @@ qr2fa  # TUI 실행
 
 # 키바인딩
 # ↑/↓ 또는 j/k: 이동
-# Enter: 클립보드 복사
+# Enter/Space: 폴더 열기 / 클립보드 복사
+# Tab: 뷰 전환 (Folder → Group → Flat)
 # 타이핑: 실시간 검색
 # q: 종료
 ```
 
 ### 주요 명령어
 
+계정은 고유 번호(`#1`, `#2`, ...)로 관리됩니다. `qr2fa list`에서 번호를 확인하세요.
+
 ```bash
 # 계정 목록
 qr2fa list
 qr2fa list --tag prod
 
-# 코드 조회 & 복사
-qr2fa get "AWS Console"
+# 코드 조회 & 복사 (번호로)
+qr2fa get 1
 
 # 계정 추가
 qr2fa add                              # 대화형
@@ -54,10 +57,10 @@ qr2fa add --qr ~/Downloads/qr.png      # QR 이미지
 qr2fa qr-capture                       # 화면 캡처 ⭐
 
 # 계정 관리
-qr2fa show "AWS Console"               # QR 코드 보기
-qr2fa edit "AWS Console"               # 편집
-qr2fa rename "old" "new"               # 이름 변경
-qr2fa delete "AWS Console"             # 삭제
+qr2fa show 1                           # 상세 정보 + QR 코드
+qr2fa edit 1                           # 태그 편집
+qr2fa rename 1 "new-name"              # 이름 변경
+qr2fa delete 1                         # 삭제
 
 # 백업/복원
 qr2fa export backup.json
@@ -126,11 +129,13 @@ qr2fa config reset
 저장 위치는 다음 우선순위로 결정됩니다:
 
 1. **`--data-dir` 플래그** (일회성 오버라이드)
+
    ```bash
    qr2fa --data-dir ~/Dropbox/.qr2fa list
    ```
 
 2. **`MFA_DATA_DIR` 환경변수** (세션별 오버라이드)
+
    ```bash
    export MFA_DATA_DIR=~/Dropbox/.qr2fa
    qr2fa list
@@ -160,6 +165,7 @@ make proto     # protobuf 재생성
 ```
 
 **프로젝트 구조:**
+
 - `cmd/` - CLI 명령어 (Cobra)
 - `internal/account/` - 데이터 모델
 - `internal/storage/` - JSON 저장
