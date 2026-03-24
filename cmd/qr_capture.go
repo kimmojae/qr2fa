@@ -35,6 +35,7 @@ var qrCaptureCmd = &cobra.Command{
 		fmt.Fprintln(cmd.ErrOrStderr(), "  3. 자동으로 계정이 추가됩니다")
 		fmt.Fprintln(cmd.ErrOrStderr(), "")
 		fmt.Fprintln(cmd.ErrOrStderr(), "💡 팁: QR 이미지 파일이 있다면 'qr2fa add --qr <파일>' 사용")
+		fmt.Fprintln(cmd.ErrOrStderr(), "⚠️  QR 캡처는 한 번에 최대 7개 계정까지 인식 가능 (초과 시 나눠서 내보내기)")
 		fmt.Fprintln(cmd.ErrOrStderr(), "")
 		fmt.Fprint(cmd.ErrOrStderr(), "화면을 선택하세요 (ESC로 취소)...")
 
