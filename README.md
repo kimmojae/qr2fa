@@ -7,6 +7,24 @@
 - `cli/` — Go CLI (qr2fa 터미널 도구)
 - `macos/` — Swift macOS 메뉴바 앱
 
+## macOS 메뉴바 앱
+
+QR2FA macOS 메뉴바 앱은 동일한 `accounts.json`을 공유하는 네이티브 macOS 앱입니다.
+
+### 설치
+
+1. [Releases](https://github.com/kimmojae/qr2fa/releases)에서 `qr2fa-macos.zip` 다운로드
+2. `qr2fa.app`을 `/Applications`로 이동
+3. 처음 실행 시 Gatekeeper 경고가 뜨면: Finder에서 `qr2fa.app` 우클릭 → **열기** → **열기**
+4. 화면 녹화 권한 요청 시 허용 (QR 스캔에 필요)
+
+### 기능
+
+- 메뉴바 아이콘 클릭 → TOTP 코드 확인 및 클립보드 복사
+- 태그별 그룹, 실시간 30초 갱신 타이머
+- 계정 추가/편집/삭제, QR 코드 스캔 (ScreenCaptureKit)
+- CLI로 변경 시 자동 리로드
+
 ## 주요 기능
 
 - 🎨 **Interactive TUI** - 실시간 코드 갱신, 폴더 뷰, 검색
