@@ -6,7 +6,7 @@ struct qr2faApp: App {
 
     var body: some Scene {
         MenuBarExtra("qr2fa", systemImage: "key.fill") {
-            Text("Loading...")
+            PopoverView()
                 .environment(appDelegate.storageService)
         }
         .menuBarExtraStyle(.window)
