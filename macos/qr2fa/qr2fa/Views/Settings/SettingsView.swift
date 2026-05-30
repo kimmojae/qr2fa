@@ -38,7 +38,7 @@ struct SettingsView: View {
                             .padding(.horizontal, 10)
                             .background(selectedTab == tab ? Color.accentColor : Color.clear)
                             .foregroundStyle(selectedTab == tab ? .white : .secondary)
-                            .cornerRadius(6)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
                     .buttonStyle(.plain)
                     .padding(.horizontal, 8)
