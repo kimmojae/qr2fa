@@ -7,9 +7,29 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		05D51B269ABE036A6F355C5E /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4506FFA3EC262CFA7C739475 /* StorageService.swift */; };
+		0F36F3866A221AA37520A4B8 /* TOTPGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93979A9D062AA2E1A03EDB8 /* TOTPGenerator.swift */; };
+		11A3598F5D47835AA6D56A2D /* QRCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8991D1C6B65A5866C508761B /* QRCaptureView.swift */; };
+		128B2AA2B01CF60772055C26 /* FileWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB705C1DD7C7B18A51F43252 /* FileWatcher.swift */; };
+		160FA490DC6B3D4E0A98940E /* AboutSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26D4BAEBA30A99C1A6CAD339 /* AboutSettingsView.swift */; };
+		24661C89CBFEFD21E7A1AF12 /* Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48BA6FC6E5EEE8F9646710E /* Account.swift */; };
 		28774D9D0EDE559F0F2C2CF1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C58CE58E6B1EF7F69F2209ED /* Assets.xcassets */; };
+		39DF4692F4AE86FD27669C12 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9DD71DAB18DB4EE4D3E34774 /* Vision.framework */; };
+		648AB564F78936D88854AE4E /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD851DCBE300C66BEFF8E74A /* SettingsView.swift */; };
+		6DDD666386FC0D7CBCD9C405 /* AddEditAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8452A25A64DFE86814133978 /* AddEditAccountView.swift */; };
+		7B6B3BA9B9D4077264D6B0FA /* StorageServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88408CF5542FBCAEF73C53B3 /* StorageServiceTests.swift */; };
+		82A361BE6D89D49DD6917290 /* PopoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E99CF7E4D2F8FB11F281F0B /* PopoverView.swift */; };
+		8AFAEF3A2439B1EFDFA0D941 /* FormWindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D67FF55DD8255D4DB5F07CE /* FormWindowManager.swift */; };
+		94201FB9B05FC82B3E2DD2C2 /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F18F2A75E8D589092F833454 /* GeneralSettingsView.swift */; };
+		95DC42D70CB14664D61AC455 /* AccountGroupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D7BF9538170DF25EE5F13E8 /* AccountGroupView.swift */; };
 		9C05264088E598FCAC8E2579 /* PlaceholderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C1FA115DCA7679BDAA7781C /* PlaceholderTests.swift */; };
+		A37F22DEC3AD06C09CAD8AD1 /* AccountsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE8850AC78C65F9D13CA2CBC /* AccountsSettingsView.swift */; };
+		A3EF3DE80D032D4A3F4A7FCA /* ScreenCaptureKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C0C1542EA75DD7AC6ED065A /* ScreenCaptureKit.framework */; };
+		A65B9988FA55D60853972DDA /* AccountRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27C509CAA27F15FDF114CAF7 /* AccountRowView.swift */; };
+		AF409432B44BF07BDB5A9B04 /* AccountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70A129B0D600674D2913C90 /* AccountTests.swift */; };
 		CE6043988BF08494C558F41D /* qr2faApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E3780EDA60632058320D35C /* qr2faApp.swift */; };
+		DF4A30EE2A5DE5D37A3EC2A7 /* TOTPGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03F34D82B7A1BCF1EC6B7E15 /* TOTPGeneratorTests.swift */; };
+		FCF51A7378F98C134BBD1B5F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 224EF6A8A2A51266EA1F4497 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -24,20 +44,74 @@
 
 /* Begin PBXFileReference section */
 		0069582156C606024B9B7962 /* qr2fa.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = qr2fa.entitlements; sourceTree = "<group>"; };
+		03F34D82B7A1BCF1EC6B7E15 /* TOTPGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TOTPGeneratorTests.swift; sourceTree = "<group>"; };
+		224EF6A8A2A51266EA1F4497 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		26D4BAEBA30A99C1A6CAD339 /* AboutSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutSettingsView.swift; sourceTree = "<group>"; };
+		27C509CAA27F15FDF114CAF7 /* AccountRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountRowView.swift; sourceTree = "<group>"; };
+		3D7BF9538170DF25EE5F13E8 /* AccountGroupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountGroupView.swift; sourceTree = "<group>"; };
+		4506FFA3EC262CFA7C739475 /* StorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
+		4C0C1542EA75DD7AC6ED065A /* ScreenCaptureKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ScreenCaptureKit.framework; path = System/Library/Frameworks/ScreenCaptureKit.framework; sourceTree = SDKROOT; };
+		4D67FF55DD8255D4DB5F07CE /* FormWindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormWindowManager.swift; sourceTree = "<group>"; };
 		4F4651FD4AF46A8B228B1D51 /* qr2fa.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = qr2fa.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6E99CF7E4D2F8FB11F281F0B /* PopoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverView.swift; sourceTree = "<group>"; };
 		7C1FA115DCA7679BDAA7781C /* PlaceholderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderTests.swift; sourceTree = "<group>"; };
+		8452A25A64DFE86814133978 /* AddEditAccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditAccountView.swift; sourceTree = "<group>"; };
+		88408CF5542FBCAEF73C53B3 /* StorageServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageServiceTests.swift; sourceTree = "<group>"; };
+		8991D1C6B65A5866C508761B /* QRCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCaptureView.swift; sourceTree = "<group>"; };
 		8E3780EDA60632058320D35C /* qr2faApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = qr2faApp.swift; sourceTree = "<group>"; };
+		9DD71DAB18DB4EE4D3E34774 /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Vision.framework; path = System/Library/Frameworks/Vision.framework; sourceTree = SDKROOT; };
+		AB705C1DD7C7B18A51F43252 /* FileWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcher.swift; sourceTree = "<group>"; };
+		AD851DCBE300C66BEFF8E74A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		C58CE58E6B1EF7F69F2209ED /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		D48BA6FC6E5EEE8F9646710E /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
+		D93979A9D062AA2E1A03EDB8 /* TOTPGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TOTPGenerator.swift; sourceTree = "<group>"; };
+		E70A129B0D600674D2913C90 /* AccountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTests.swift; sourceTree = "<group>"; };
 		F0C7D43B89861E28DBD9C096 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		F18F2A75E8D589092F833454 /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
+		FE8850AC78C65F9D13CA2CBC /* AccountsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountsSettingsView.swift; sourceTree = "<group>"; };
 		FFDD44328F364C39D1148364 /* qr2faTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = qr2faTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFrameworksBuildPhase section */
+		F9B6CE5626A8BD113E68ACA2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A3EF3DE80D032D4A3F4A7FCA /* ScreenCaptureKit.framework in Frameworks */,
+				39DF4692F4AE86FD27669C12 /* Vision.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
 /* Begin PBXGroup section */
+		187CFDA54EDA3E4EE03F29A9 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				AC6AE969CAD16FC5F8710A8D /* Settings */,
+				3D7BF9538170DF25EE5F13E8 /* AccountGroupView.swift */,
+				27C509CAA27F15FDF114CAF7 /* AccountRowView.swift */,
+				8452A25A64DFE86814133978 /* AddEditAccountView.swift */,
+				6E99CF7E4D2F8FB11F281F0B /* PopoverView.swift */,
+				8991D1C6B65A5866C508761B /* QRCaptureView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		1D4E5E8BE855CC03B7ACFBB7 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				D48BA6FC6E5EEE8F9646710E /* Account.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
 		2D1030A84805D0B7659D05D9 = {
 			isa = PBXGroup;
 			children = (
 				DF39E8F3C59BAAA8D803CA0E /* qr2fa */,
 				61EA82ED013B6B13DCC7B9B5 /* qr2faTests */,
+				F2CB887BF5A736D4F8CED4C1 /* Frameworks */,
 				B8DD0B5CD5CBBFA7A2CF3B13 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -45,9 +119,23 @@
 		61EA82ED013B6B13DCC7B9B5 /* qr2faTests */ = {
 			isa = PBXGroup;
 			children = (
+				E70A129B0D600674D2913C90 /* AccountTests.swift */,
 				7C1FA115DCA7679BDAA7781C /* PlaceholderTests.swift */,
+				88408CF5542FBCAEF73C53B3 /* StorageServiceTests.swift */,
+				03F34D82B7A1BCF1EC6B7E15 /* TOTPGeneratorTests.swift */,
 			);
 			path = qr2faTests;
+			sourceTree = "<group>";
+		};
+		AC6AE969CAD16FC5F8710A8D /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				26D4BAEBA30A99C1A6CAD339 /* AboutSettingsView.swift */,
+				FE8850AC78C65F9D13CA2CBC /* AccountsSettingsView.swift */,
+				F18F2A75E8D589092F833454 /* GeneralSettingsView.swift */,
+				AD851DCBE300C66BEFF8E74A /* SettingsView.swift */,
+			);
+			path = Settings;
 			sourceTree = "<group>";
 		};
 		B8DD0B5CD5CBBFA7A2CF3B13 /* Products */ = {
@@ -63,6 +151,9 @@
 			isa = PBXGroup;
 			children = (
 				E2F7EC5C946E8CEC87FBE43A /* App */,
+				1D4E5E8BE855CC03B7ACFBB7 /* Models */,
+				F4DA86E0B2E1F31AD5FD847F /* Services */,
+				187CFDA54EDA3E4EE03F29A9 /* Views */,
 				C58CE58E6B1EF7F69F2209ED /* Assets.xcassets */,
 				F0C7D43B89861E28DBD9C096 /* Info.plist */,
 				0069582156C606024B9B7962 /* qr2fa.entitlements */,
@@ -73,9 +164,30 @@
 		E2F7EC5C946E8CEC87FBE43A /* App */ = {
 			isa = PBXGroup;
 			children = (
+				224EF6A8A2A51266EA1F4497 /* AppDelegate.swift */,
+				4D67FF55DD8255D4DB5F07CE /* FormWindowManager.swift */,
 				8E3780EDA60632058320D35C /* qr2faApp.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		F2CB887BF5A736D4F8CED4C1 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				4C0C1542EA75DD7AC6ED065A /* ScreenCaptureKit.framework */,
+				9DD71DAB18DB4EE4D3E34774 /* Vision.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		F4DA86E0B2E1F31AD5FD847F /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				AB705C1DD7C7B18A51F43252 /* FileWatcher.swift */,
+				4506FFA3EC262CFA7C739475 /* StorageService.swift */,
+				D93979A9D062AA2E1A03EDB8 /* TOTPGenerator.swift */,
+			);
+			path = Services;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -105,6 +217,7 @@
 			buildPhases = (
 				F0F266F740A83FBDF1D8F11C /* Sources */,
 				E8461D06101DAB44B866DC14 /* Resources */,
+				F9B6CE5626A8BD113E68ACA2 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -164,6 +277,21 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				160FA490DC6B3D4E0A98940E /* AboutSettingsView.swift in Sources */,
+				24661C89CBFEFD21E7A1AF12 /* Account.swift in Sources */,
+				95DC42D70CB14664D61AC455 /* AccountGroupView.swift in Sources */,
+				A65B9988FA55D60853972DDA /* AccountRowView.swift in Sources */,
+				A37F22DEC3AD06C09CAD8AD1 /* AccountsSettingsView.swift in Sources */,
+				6DDD666386FC0D7CBCD9C405 /* AddEditAccountView.swift in Sources */,
+				FCF51A7378F98C134BBD1B5F /* AppDelegate.swift in Sources */,
+				128B2AA2B01CF60772055C26 /* FileWatcher.swift in Sources */,
+				8AFAEF3A2439B1EFDFA0D941 /* FormWindowManager.swift in Sources */,
+				94201FB9B05FC82B3E2DD2C2 /* GeneralSettingsView.swift in Sources */,
+				82A361BE6D89D49DD6917290 /* PopoverView.swift in Sources */,
+				11A3598F5D47835AA6D56A2D /* QRCaptureView.swift in Sources */,
+				648AB564F78936D88854AE4E /* SettingsView.swift in Sources */,
+				05D51B269ABE036A6F355C5E /* StorageService.swift in Sources */,
+				0F36F3866A221AA37520A4B8 /* TOTPGenerator.swift in Sources */,
 				CE6043988BF08494C558F41D /* qr2faApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -172,7 +300,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AF409432B44BF07BDB5A9B04 /* AccountTests.swift in Sources */,
 				9C05264088E598FCAC8E2579 /* PlaceholderTests.swift in Sources */,
+				7B6B3BA9B9D4077264D6B0FA /* StorageServiceTests.swift in Sources */,
+				DF4A30EE2A5DE5D37A3EC2A7 /* TOTPGeneratorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

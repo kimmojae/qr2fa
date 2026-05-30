@@ -50,7 +50,7 @@ struct SettingsView: View {
             .navigationSplitViewColumnWidth(min: 160, ideal: 180, max: 220)
         } detail: {
             switch selectedTab {
-            case .accounts: Text("계정 준비 중")
+            case .accounts: AccountsSettingsView()
             case .general:  GeneralSettingsView()
             case .about:    AboutSettingsView()
             }
