@@ -2,6 +2,11 @@
 
 터미널에서 사용하는 TOTP MFA 인증 관리 도구. QR 캡처와 Google Authenticator 마이그레이션 지원.
 
+## Repository Structure
+
+- `cli/` — Go CLI (qr2fa 터미널 도구)
+- `macos/` — Swift macOS 메뉴바 앱
+
 ## 주요 기능
 
 - 🎨 **Interactive TUI** - 실시간 코드 갱신, 폴더 뷰, 검색
