@@ -1,6 +1,6 @@
 import Foundation
 
-struct Account: Codable, Identifiable, Equatable {
+struct Account: Codable, Identifiable, Equatable, Hashable {
     var id: Int
     var name: String
     var issuer: String
@@ -10,6 +10,24 @@ struct Account: Codable, Identifiable, Equatable {
     var digits: Int
     var period: Int
     var createdAt: Date
+}
+
+extension Account {
+    func toOTPAuthURL() -> String {
+        let label = issuer.isEmpty ? name : "\(issuer):\(name)"
+        let encoded = label.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? label
+        var items = [
+            "secret=\(secret)",
+            "digits=\(digits)",
+            "period=\(period)",
+            "algorithm=\(algorithm)"
+        ]
+        if !issuer.isEmpty {
+            let encodedIssuer = issuer.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? issuer
+            items.insert("issuer=\(encodedIssuer)", at: 0)
+        }
+        return "otpauth://totp/\(encoded)?\(items.joined(separator: "&"))"
+    }
 }
 
 struct AccountStorage: Codable {

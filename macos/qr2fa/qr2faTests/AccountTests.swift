@@ -92,4 +92,33 @@ final class AccountTests: XCTestCase {
         let account = try decoder.decode(Account.self, from: json)
         XCTAssertEqual(account.issuer, "Google")
     }
+
+    func test_toOTPAuthURL_sha1() {
+        let account = Account(
+            id: 1, name: "user@example.com", issuer: "GitHub",
+            secret: "JBSWY3DPEHPK3PXP", tag: "dev",
+            algorithm: "SHA1", digits: 6, period: 30,
+            createdAt: Date()
+        )
+        let url = account.toOTPAuthURL()
+        XCTAssertTrue(url.hasPrefix("otpauth://totp/"))
+        XCTAssertTrue(url.contains("secret=JBSWY3DPEHPK3PXP"))
+        XCTAssertTrue(url.contains("issuer=GitHub"))
+        XCTAssertTrue(url.contains("digits=6"))
+        XCTAssertTrue(url.contains("period=30"))
+        XCTAssertTrue(url.contains("algorithm=SHA1"))
+    }
+
+    func test_toOTPAuthURL_sha256() {
+        let account = Account(
+            id: 2, name: "admin", issuer: "AWS",
+            secret: "JBSWY3DPEHPK3PXP", tag: "prod",
+            algorithm: "SHA256", digits: 8, period: 60,
+            createdAt: Date()
+        )
+        let url = account.toOTPAuthURL()
+        XCTAssertTrue(url.contains("digits=8"))
+        XCTAssertTrue(url.contains("period=60"))
+        XCTAssertTrue(url.contains("algorithm=SHA256"))
+    }
 }
