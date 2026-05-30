@@ -6,10 +6,39 @@ final class StorageService {
 
     private(set) var accounts: [Account] = []
     private var nextId: Int = 0
-    let storagePath: String
+    private(set) var storagePath: String
 
     init(path: String? = nil) {
         self.storagePath = path ?? StorageService.resolveDefaultPath()
+    }
+
+    // MARK: - Path change
+
+    func changePath(to newPath: String) throws {
+        let fm = FileManager.default
+        let newDir = URL(fileURLWithPath: newPath).deletingLastPathComponent().path
+        try fm.createDirectory(atPath: newDir, withIntermediateDirectories: true)
+
+        if fm.fileExists(atPath: storagePath) {
+            if fm.fileExists(atPath: newPath) {
+                try fm.removeItem(atPath: newPath)
+            }
+            try fm.copyItem(atPath: storagePath, toPath: newPath)
+        }
+
+        try writeConfigDataDir(newDir)
+        storagePath = newPath
+        try load()
+    }
+
+    private func writeConfigDataDir(_ dataDir: String) throws {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let configDir = "\(home)/.config/qr2fa"
+        try FileManager.default.createDirectory(atPath: configDir, withIntermediateDirectories: true)
+        let configPath = "\(configDir)/config.json"
+        let json: [String: String] = ["data_dir": dataDir]
+        let data = try JSONSerialization.data(withJSONObject: json, options: .prettyPrinted)
+        try data.write(to: URL(fileURLWithPath: configPath))
     }
 
     // MARK: - Load / Save
