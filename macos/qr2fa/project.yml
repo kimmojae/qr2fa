@@ -37,6 +37,9 @@ targets:
         NSPrincipalClass: NSApplication
         NSPrivacyAccessedAPITypes: []
         NSScreenCaptureUsageDescription: "QR code scanning requires screen access"
+    dependencies:
+      - sdk: ScreenCaptureKit.framework
+      - sdk: Vision.framework
     entitlements:
       path: qr2fa/qr2fa.entitlements
       properties:

@@ -37,8 +37,10 @@ struct AccountsSettingsView: View {
                     }
                 }
             }
-            .navigationDestination(for: AccountDetailMode.self) { _ in
-                Text("준비 중")
+            .navigationDestination(for: AccountDetailMode.self) { mode in
+                AccountDetailView(mode: mode) {
+                    navPath.removeLast()
+                }
             }
         }
     }
