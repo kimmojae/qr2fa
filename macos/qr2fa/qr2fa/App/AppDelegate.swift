@@ -1,49 +1,121 @@
 import AppKit
-import SwiftUI
+import Observation
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
     let storageService = StorageService()
     private var statusItem: NSStatusItem!
-    private var popover: NSPopover!
+    private var submenuDelegates: [SubMenuDelegate] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-
-        do {
-            try storageService.load()
-        } catch {
-            NSLog("qr2fa: failed to load accounts: \(error)")
+        do { try storageService.load() } catch {
+            NSLog("qr2fa: load failed: \(error)")
         }
-
         setupStatusItem()
+        observeAccounts()
     }
 
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "dot.viewfinder", accessibilityDescription: "qr2fa")
-            button.action = #selector(togglePopover)
-            button.target = self
-        }
-
-        popover = NSPopover()
-        popover.behavior = .transient
-        popover.animates = false
-        popover.contentViewController = NSHostingController(
-            rootView: PopoverView()
-                .environment(storageService)
-        )
+        statusItem.button?.image = NSImage(systemSymbolName: "dot.viewfinder", accessibilityDescription: "qr2fa")
+        rebuildMenu()
     }
 
-    @objc private func togglePopover() {
-        guard let button = statusItem.button else { return }
-        if popover.isShown {
-            popover.performClose(nil)
+    private func observeAccounts() {
+        withObservationTracking {
+            _ = storageService.accounts
+        } onChange: { [weak self] in
+            DispatchQueue.main.async {
+                self?.rebuildMenu()
+                self?.observeAccounts()
+            }
+        }
+    }
+
+    private func rebuildMenu() {
+        submenuDelegates = []
+        let menu = NSMenu()
+
+        let groups = groupedAccounts()
+
+        if groups.isEmpty {
+            let empty = NSMenuItem(title: "No accounts", action: nil, keyEquivalent: "")
+            empty.isEnabled = false
+            menu.addItem(empty)
         } else {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            popover.contentViewController?.view.window?.makeKey()
+            for (issuer, accounts) in groups {
+                let title = issuer.count > 18 ? String(issuer.prefix(16)) + "…" : issuer
+                let issuerItem = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+                let submenu = NSMenu(title: issuer)
+                var pairs: [(NSMenuItem, AccountMenuItemView)] = []
+
+                for account in accounts {
+                    let item = NSMenuItem()
+                    item.target = self
+                    item.action = #selector(noOp)
+                    let view = AccountMenuItemView(account: account)
+                    item.view = view
+                    pairs.append((item, view))
+                    submenu.addItem(item)
+                }
+
+                let delegate = SubMenuDelegate(pairs: pairs)
+                submenu.delegate = delegate
+                submenuDelegates.append(delegate)
+
+                issuerItem.submenu = submenu
+                menu.addItem(issuerItem)
+            }
+        }
+
+        menu.addItem(.separator())
+        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+
+        statusItem.menu = menu
+    }
+
+    private func groupedAccounts() -> [(String, [Account])] {
+        var dict: [String: [Account]] = [:]
+        for acc in storageService.accounts {
+            let key = acc.issuer.isEmpty ? acc.name : acc.issuer
+            dict[key, default: []].append(acc)
+        }
+        return dict.keys.sorted().map { ($0, dict[$0]!) }
+    }
+
+    @objc private func noOp() {}
+}
+
+// MARK: - SubMenuDelegate
+
+final class SubMenuDelegate: NSObject, NSMenuDelegate {
+    private let pairs: [(NSMenuItem, AccountMenuItemView)]
+    private var timer: Timer?
+
+    init(pairs: [(NSMenuItem, AccountMenuItemView)]) {
+        self.pairs = pairs
+    }
+
+    func menuWillOpen(_ menu: NSMenu) {
+        pairs.forEach { $0.1.updateCode() }
+        let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.pairs.forEach { $0.1.updateCode() }
+        }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
+    }
+
+    func menuDidClose(_ menu: NSMenu) {
+        timer?.invalidate()
+        timer = nil
+        pairs.forEach { $0.1.setHighlighted(false) }
+    }
+
+    func menu(_ menu: NSMenu, willHighlight item: NSMenuItem?) {
+        for (menuItem, view) in pairs {
+            view.setHighlighted(menuItem === item)
         }
     }
 }

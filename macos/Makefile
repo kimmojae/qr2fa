@@ -11,8 +11,7 @@ build:
 		-scheme $(SCHEME) \
 		-configuration Release \
 		-derivedDataPath $(BUILD_DIR)/DerivedData \
-		CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
-		| xcpretty || true
+		CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 
 archive:
 	xcodebuild archive \
