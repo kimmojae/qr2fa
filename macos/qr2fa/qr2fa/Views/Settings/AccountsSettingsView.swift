@@ -8,6 +8,7 @@ enum AccountDetailMode: Hashable {
 struct AccountsSettingsView: View {
     @Environment(StorageService.self) private var storageService
     @State private var navPath = NavigationPath()
+    @State private var expandedGroups: Set<String> = []
 
     private var grouped: [(issuer: String, accounts: [Account])] {
         var dict: [String: [Account]] = [:]
@@ -28,6 +29,9 @@ struct AccountsSettingsView: View {
                 }
             }
             .navigationTitle("계정")
+            .onAppear {
+                expandedGroups = Set(grouped.map(\.issuer))
+            }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
@@ -64,21 +68,36 @@ struct AccountsSettingsView: View {
         List {
             ForEach(grouped, id: \.issuer) { group in
                 Section {
-                    ForEach(group.accounts) { account in
-                        AccountSettingsRowView(account: account)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                navPath.append(AccountDetailMode.edit(account))
-                            }
+                    if expandedGroups.contains(group.issuer) {
+                        ForEach(group.accounts) { account in
+                            AccountSettingsRowView(account: account)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    navPath.append(AccountDetailMode.edit(account))
+                                }
+                        }
                     }
                 } header: {
-                    HStack(spacing: 4) {
-                        Text(group.issuer)
-                            .font(.system(size: 11, weight: .semibold))
-                        Text("(\(group.accounts.count))")
-                            .foregroundStyle(.tertiary)
-                            .font(.system(size: 10))
+                    Button {
+                        if expandedGroups.contains(group.issuer) {
+                            expandedGroups.remove(group.issuer)
+                        } else {
+                            expandedGroups.insert(group.issuer)
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: expandedGroups.contains(group.issuer) ? "chevron.down" : "chevron.right")
+                                .font(.system(size: 8, weight: .semibold))
+                                .foregroundStyle(.tertiary)
+                            Text(group.issuer)
+                                .font(.system(size: 11, weight: .semibold))
+                            Text("(\(group.accounts.count))")
+                                .foregroundStyle(.tertiary)
+                                .font(.system(size: 10))
+                            Spacer()
+                        }
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }

@@ -5,7 +5,6 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
     let storageService = StorageService()
-    private var fileWatcher: FileWatcher?
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
 
@@ -16,11 +15,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             try storageService.load()
         } catch {
             NSLog("qr2fa: failed to load accounts: \(error)")
-        }
-
-        fileWatcher = FileWatcher(path: storageService.storagePath) { [weak self] in
-            guard let self else { return }
-            try? self.storageService.load()
         }
 
         setupStatusItem()

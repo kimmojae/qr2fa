@@ -7,9 +7,17 @@ final class StorageService {
     private(set) var accounts: [Account] = []
     private var nextId: Int = 0
     private(set) var storagePath: String
+    private var fileWatcher: FileWatcher?
 
     init(path: String? = nil) {
         self.storagePath = path ?? StorageService.resolveDefaultPath()
+        startFileWatcher()
+    }
+
+    private func startFileWatcher() {
+        fileWatcher = FileWatcher(path: storagePath) { [weak self] in
+            try? self?.load()
+        }
     }
 
     // MARK: - Path change
@@ -28,6 +36,7 @@ final class StorageService {
 
         try writeConfigDataDir(newDir)
         storagePath = newPath
+        startFileWatcher()
         try load()
     }
 
