@@ -1,5 +1,5 @@
 # Binaries
-qr2fa
+cli/qr2fa
 mfa
 *.exe
 *.exe~
@@ -11,6 +11,13 @@ mfa
 # Build artifacts
 dist/
 *.tmp
+
+# Xcode build artifacts
+macos/qr2fa/build/
+macos/qr2fa/*.xcodeproj/xcuserdata/
+macos/qr2fa/*.xcodeproj/project.xcworkspace/xcuserdata/
+macos/qr2fa/*.xcworkspace/xcuserdata/
+DerivedData/
 
 # Test binary, built with `go test -c`
 *.test

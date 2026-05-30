@@ -1,0 +1,58 @@
+name: qr2fa
+options:
+  deploymentTarget:
+    macOS: "14.0"
+  bundleIdPrefix: com.kimmojae
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+targets:
+  qr2fa:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: qr2fa
+        excludes:
+          - "**/*.md"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kimmojae.qr2fa
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        SWIFT_VERSION: "5.9"
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGNING_ALLOWED: "NO"
+        ENABLE_HARDENED_RUNTIME: "NO"
+      debug:
+        SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+    info:
+      path: qr2fa/Info.plist
+      properties:
+        CFBundleName: qr2fa
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        LSUIElement: true
+        NSHighResolutionCapable: true
+        NSPrincipalClass: NSApplication
+        NSPrivacyAccessedAPITypes: []
+        NSScreenCaptureUsageDescription: "QR code scanning requires screen access"
+    entitlements:
+      path: qr2fa/qr2fa.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+
+  qr2faTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: qr2faTests
+    settings:
+      base:
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        SWIFT_VERSION: "5.9"
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_REQUIRED: "NO"
+    dependencies:
+      - target: qr2fa
