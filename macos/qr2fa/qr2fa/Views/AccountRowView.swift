@@ -2,7 +2,6 @@ import SwiftUI
 
 struct AccountRowView: View {
     let account: Account
-    let onEdit: (Account) -> Void
     @Environment(StorageService.self) private var storageService
     @State private var code: String = "------"
     @State private var remaining: Int = 30
@@ -12,47 +11,38 @@ struct AccountRowView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            // Left: issuer + name
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text(account.issuer.isEmpty ? account.name : account.issuer)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 12, weight: .medium))
                     .lineLimit(1)
                 if !account.issuer.isEmpty {
                     Text(account.name)
-                        .font(.system(size: 11))
+                        .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Right: code + timer
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(displayCode)
-                    .font(.system(size: 14, design: .monospaced).weight(.semibold))
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(showCopied ? "복사됨!" : TOTPGenerator.formattedCode(code))
+                    .font(.system(size: 13, design: .monospaced).weight(.semibold))
                     .foregroundStyle(showCopied ? Color.green : Color.primary)
                     .animation(.easeInOut(duration: 0.2), value: showCopied)
-
                 TimerDotsView(remaining: remaining, period: account.period)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
         .contentShape(Rectangle())
         .onTapGesture { copyCode() }
         .onReceive(timer) { _ in refresh() }
         .onAppear { refresh() }
         .contextMenu {
-            Button("편집") { onEdit(account) }
-            Divider()
             Button("삭제", role: .destructive) {
                 try? storageService.delete(id: account.id)
             }
         }
-    }
-
-    private var displayCode: String {
-        showCopied ? "복사됨!" : TOTPGenerator.formattedCode(code)
     }
 
     private func refresh() {
@@ -64,9 +54,7 @@ struct AccountRowView: View {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(code, forType: .string)
         showCopied = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            showCopied = false
-        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showCopied = false }
     }
 }
 
@@ -80,11 +68,11 @@ struct TimerDotsView: View {
     }
 
     var body: some View {
-        HStack(spacing: 3) {
+        HStack(spacing: 2) {
             ForEach(0..<totalDots, id: \.self) { i in
                 Circle()
-                    .fill(i < filledDots ? Color.accentColor : Color.secondary.opacity(0.3))
-                    .frame(width: 5, height: 5)
+                    .fill(i < filledDots ? Color.accentColor : Color.secondary.opacity(0.25))
+                    .frame(width: 4, height: 4)
             }
         }
     }

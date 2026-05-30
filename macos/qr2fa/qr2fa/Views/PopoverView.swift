@@ -3,8 +3,6 @@ import SwiftUI
 struct PopoverView: View {
     @Environment(StorageService.self) private var storageService
     @State private var searchText = ""
-    @State private var showingAddAccount = false
-    @State private var accountToEdit: Account?
 
     private var groupedAccounts: [(tag: String, accounts: [Account])] {
         let source = storageService.accounts
@@ -12,12 +10,8 @@ struct PopoverView: View {
             $0.name.localizedCaseInsensitiveContains(searchText) ||
             $0.issuer.localizedCaseInsensitiveContains(searchText)
         }
-
         var dict: [String: [Account]] = [:]
-        for acc in filtered {
-            dict[acc.tag, default: []].append(acc)
-        }
-        // Sort: named tags alphabetically first, empty tag ("태그 없음") last
+        for acc in filtered { dict[acc.tag, default: []].append(acc) }
         return dict.keys.sorted { a, b in
             if a.isEmpty { return false }
             if b.isEmpty { return true }
@@ -27,70 +21,62 @@ struct PopoverView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Search + add bar
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                    .font(.system(size: 13))
-                TextField("검색...", text: $searchText)
+                    .foregroundStyle(.tertiary)
+                    .font(.system(size: 11))
+                TextField("검색", text: $searchText)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 13))
+                    .font(.system(size: 12))
                 Spacer()
                 Button {
-                    showingAddAccount = true
+                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                    NSApp.activate(ignoringOtherApps: true)
                 } label: {
                     Image(systemName: "plus")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
                 .help("계정 추가")
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
 
             Divider()
 
             if storageService.accounts.isEmpty && searchText.isEmpty {
-                // Empty state
-                VStack(spacing: 8) {
+                VStack(spacing: 6) {
                     Image(systemName: "key.slash")
-                        .font(.system(size: 32))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 24))
+                        .foregroundStyle(.tertiary)
                     Text("계정이 없습니다")
+                        .font(.system(size: 12))
                         .foregroundStyle(.secondary)
-                    Button("계정 추가") { showingAddAccount = true }
-                        .buttonStyle(.borderedProminent)
+                    Button("추가") {
+                        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                        NSApp.activate(ignoringOtherApps: true)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding()
             } else if groupedAccounts.isEmpty {
-                // No search results
-                Text("'\(searchText)'에 해당하는 계정 없음")
+                Text("'\(searchText)' 없음")
+                    .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding()
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
                         ForEach(groupedAccounts, id: \.tag) { group in
-                            AccountGroupView(
-                                tag: group.tag,
-                                accounts: group.accounts,
-                                onEdit: { account in accountToEdit = account }
-                            )
+                            AccountGroupView(tag: group.tag, accounts: group.accounts)
                         }
                     }
                 }
+                .scrollIndicators(.hidden)
             }
         }
-        .frame(width: 320, height: 420)
-        .sheet(isPresented: $showingAddAccount) {
-            AddEditAccountView(mode: .add)
-                .environment(storageService)
-        }
-        .sheet(item: $accountToEdit) { account in
-            AddEditAccountView(mode: .edit(account))
-                .environment(storageService)
-        }
+        .frame(width: 300, height: 380)
     }
 }
