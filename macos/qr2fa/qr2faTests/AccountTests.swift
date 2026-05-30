@@ -121,4 +121,17 @@ final class AccountTests: XCTestCase {
         XCTAssertTrue(url.contains("period=60"))
         XCTAssertTrue(url.contains("algorithm=SHA256"))
     }
+
+    func test_toOTPAuthURL_noIssuer() {
+        let account = Account(
+            id: 3, name: "user@example.com", issuer: "",
+            secret: "JBSWY3DPEHPK3PXP", tag: "",
+            algorithm: "SHA1", digits: 6, period: 30,
+            createdAt: Date()
+        )
+        let url = account.toOTPAuthURL()
+        XCTAssertTrue(url.hasPrefix("otpauth://totp/"))
+        XCTAssertFalse(url.contains("issuer="))
+        XCTAssertTrue(url.contains("secret=JBSWY3DPEHPK3PXP"))
+    }
 }

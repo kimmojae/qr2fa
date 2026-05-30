@@ -14,19 +14,22 @@ struct Account: Codable, Identifiable, Equatable, Hashable {
 
 extension Account {
     func toOTPAuthURL() -> String {
-        let label = issuer.isEmpty ? name : "\(issuer):\(name)"
-        let encoded = label.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? label
+        let encodedIssuer = issuer.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? issuer
+        let encodedName = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
+        let label = issuer.isEmpty ? encodedName : "\(encodedIssuer):\(encodedName)"
+        let encodedSecret = secret.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? secret
+        let encodedAlgorithm = algorithm.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? algorithm
         var items = [
-            "secret=\(secret)",
+            "secret=\(encodedSecret)",
             "digits=\(digits)",
             "period=\(period)",
-            "algorithm=\(algorithm)"
+            "algorithm=\(encodedAlgorithm)"
         ]
         if !issuer.isEmpty {
-            let encodedIssuer = issuer.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? issuer
-            items.insert("issuer=\(encodedIssuer)", at: 0)
+            let encodedIssuerQuery = issuer.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? issuer
+            items.append("issuer=\(encodedIssuerQuery)")
         }
-        return "otpauth://totp/\(encoded)?\(items.joined(separator: "&"))"
+        return "otpauth://totp/\(label)?\(items.joined(separator: "&"))"
     }
 }
 
