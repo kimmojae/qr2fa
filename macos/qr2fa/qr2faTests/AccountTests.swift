@@ -1,0 +1,95 @@
+import XCTest
+@testable import qr2fa
+
+final class AccountTests: XCTestCase {
+
+    private let decoder: JSONDecoder = {
+        let d = JSONDecoder()
+        d.dateDecodingStrategy = .custom { decoder in
+            let c = try decoder.singleValueContainer()
+            let s = try c.decode(String.self)
+            let fmt = ISO8601DateFormatter()
+            fmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = fmt.date(from: s) { return date }
+            fmt.formatOptions = [.withInternetDateTime]
+            if let date = fmt.date(from: s) { return date }
+            throw DecodingError.dataCorruptedError(in: c, debugDescription: "Invalid date: \(s)")
+        }
+        return d
+    }()
+
+    func test_decodeFromJSON() throws {
+        let json = """
+        {
+            "id": 1,
+            "name": "test@example.com",
+            "issuer": "GitHub",
+            "secret": "JBSWY3DPEHPK3PXP",
+            "tag": "dev",
+            "algorithm": "SHA1",
+            "digits": 6,
+            "period": 30,
+            "createdAt": "2024-01-01T00:00:00Z"
+        }
+        """.data(using: .utf8)!
+
+        let account = try decoder.decode(Account.self, from: json)
+        XCTAssertEqual(account.id, 1)
+        XCTAssertEqual(account.name, "test@example.com")
+        XCTAssertEqual(account.issuer, "GitHub")
+        XCTAssertEqual(account.secret, "JBSWY3DPEHPK3PXP")
+        XCTAssertEqual(account.tag, "dev")
+        XCTAssertEqual(account.algorithm, "SHA1")
+        XCTAssertEqual(account.digits, 6)
+        XCTAssertEqual(account.period, 30)
+    }
+
+    func test_decodeStorage() throws {
+        let json = """
+        {
+            "version": "1.0",
+            "nextId": 2,
+            "accounts": [
+                {
+                    "id": 1, "name": "user", "issuer": "AWS",
+                    "secret": "JBSWY3DPEHPK3PXP", "tag": "prod",
+                    "algorithm": "SHA1", "digits": 6, "period": 30,
+                    "createdAt": "2024-01-01T00:00:00Z"
+                }
+            ]
+        }
+        """.data(using: .utf8)!
+
+        let storage = try decoder.decode(AccountStorage.self, from: json)
+        XCTAssertEqual(storage.version, "1.0")
+        XCTAssertEqual(storage.nextId, 2)
+        XCTAssertEqual(storage.accounts.count, 1)
+        XCTAssertEqual(storage.accounts[0].issuer, "AWS")
+    }
+
+    func test_emptyStorage() {
+        let storage = AccountStorage.empty()
+        XCTAssertEqual(storage.version, "1.0")
+        XCTAssertEqual(storage.nextId, 0)
+        XCTAssertTrue(storage.accounts.isEmpty)
+    }
+
+    func test_decodeWithFractionalSeconds() throws {
+        let json = """
+        {
+            "id": 2,
+            "name": "user",
+            "issuer": "Google",
+            "secret": "JBSWY3DPEHPK3PXP",
+            "tag": "",
+            "algorithm": "SHA1",
+            "digits": 6,
+            "period": 30,
+            "createdAt": "2025-03-15T10:30:00.123456789Z"
+        }
+        """.data(using: .utf8)!
+
+        let account = try decoder.decode(Account.self, from: json)
+        XCTAssertEqual(account.issuer, "Google")
+    }
+}
