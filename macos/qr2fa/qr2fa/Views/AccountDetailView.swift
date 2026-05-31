@@ -8,34 +8,16 @@ struct AccountDetailView: View {
     @State private var totpCode: String = "------"
     @State private var remaining: Int = 30
     @State private var qrImage: NSImage?
+    @State private var showCopied = false
+    @State private var isHoveringTOTP = false
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                // 아바타 + 이름
-                VStack(spacing: 8) {
-                    ZStack {
-                        Circle()
-                            .fill(account.avatarColor.opacity(0.25))
-                            .frame(width: 80, height: 80)
-                        Text(account.avatarInitial)
-                            .font(.system(size: 32, weight: .semibold))
-                            .foregroundStyle(account.avatarColor)
-                    }
-
-                    Text(account.name)
-                        .font(.system(size: 19, weight: .bold))
-                        .multilineTextAlignment(.center)
-
-                    if !account.issuer.isEmpty {
-                        Text(account.issuer)
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .padding(.top, 24)
+                // 계정 정보 카드
+                accountInfoCard
 
                 // TOTP 카드
                 totpCard
@@ -55,6 +37,47 @@ struct AccountDetailView: View {
 
     // MARK: - Subviews
 
+    private var accountInfoCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("서비스")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .kerning(0.5)
+            Text(account.issuer.isEmpty ? account.name : account.issuer)
+                .font(.system(size: 15, weight: .semibold))
+
+            Divider()
+                .padding(.vertical, 2)
+
+            Text("계정")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .kerning(0.5)
+            Text(account.name)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(account.issuer.isEmpty ? .secondary : .primary)
+
+            if !account.tag.isEmpty {
+                Divider()
+                    .padding(.vertical, 2)
+
+                Text("태그")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .kerning(0.5)
+                TagBadgeView(tag: account.tag)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(Color(nsColor: NSColor(red: 0.17, green: 0.17, blue: 0.18, alpha: 1)))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.top, 16)
+    }
+
     private var totpCard: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
@@ -64,9 +87,9 @@ struct AccountDetailView: View {
                     .textCase(.uppercase)
                     .kerning(0.5)
 
-                Text(TOTPGenerator.formattedCode(totpCode))
+                Text(showCopied ? "Copied!" : TOTPGenerator.formattedCode(totpCode))
                     .font(.system(size: 28, weight: .bold, design: .monospaced))
-                    .foregroundStyle(remaining <= 5 ? Color.orange : Color.green)
+                    .foregroundStyle(showCopied ? Color.green : (remaining <= 5 ? Color.orange : Color.primary))
             }
 
             Spacer()
@@ -91,8 +114,12 @@ struct AccountDetailView: View {
             }
         }
         .padding(14)
-        .background(Color(nsColor: NSColor(red: 0.17, green: 0.17, blue: 0.18, alpha: 1)))
+        .background(isHoveringTOTP
+            ? Color(nsColor: NSColor(red: 0.22, green: 0.22, blue: 0.23, alpha: 1))
+            : Color(nsColor: NSColor(red: 0.17, green: 0.17, blue: 0.18, alpha: 1)))
         .clipShape(RoundedRectangle(cornerRadius: 10))
+        .onHover { isHoveringTOTP = $0 }
+        .onTapGesture { copyCode() }
     }
 
     private var qrCard: some View {
@@ -122,6 +149,15 @@ struct AccountDetailView: View {
     }
 
     // MARK: - Helpers
+
+    private func copyCode() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(totpCode, forType: .string)
+        showCopied = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            showCopied = false
+        }
+    }
 
     private func refreshTOTP() {
         totpCode = (try? TOTPGenerator.generate(account: account)) ?? "------"

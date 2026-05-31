@@ -20,6 +20,18 @@ final class StorageService {
         }
     }
 
+    var isDefaultPath: Bool {
+        storagePath == StorageService.resolveDefaultPath()
+    }
+
+    func resetToDefaultPath() throws {
+        let configPath = "\(FileManager.default.homeDirectoryForCurrentUser.path)/.config/qr2fa/config.json"
+        try? FileManager.default.removeItem(atPath: configPath)
+        storagePath = StorageService.resolveDefaultPath()
+        startFileWatcher()
+        try load()
+    }
+
     // MARK: - Path change
 
     func changePath(to newPath: String) throws {

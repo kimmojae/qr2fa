@@ -5,7 +5,6 @@ struct SettingsView: View {
     @State private var selectedIssuer: String? = nil
     @State private var selectedAccountID: Int? = nil
     @State private var showingAddSheet = false
-    @State private var showingEditSheet = false
 
     private var issuers: [String] {
         let all = storageService.accounts.map { $0.issuer.isEmpty ? $0.name : $0.issuer }
@@ -66,7 +65,6 @@ struct SettingsView: View {
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button {
-                    showingEditSheet = true
                 } label: {
                     Text("편집")
                 }
@@ -93,29 +91,23 @@ private struct AccountRowView: View {
     let account: Account
 
     var body: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(account.avatarColor.opacity(0.3))
-                    .frame(width: 40, height: 40)
-                Text(account.avatarInitial)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(account.avatarColor)
-            }
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(account.name)
-                    .font(.system(size: 13, weight: .medium))
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 5) {
+                Text(account.issuer.isEmpty ? account.name : account.issuer)
+                    .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
-                if !account.issuer.isEmpty {
-                    Text(account.issuer)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                if !account.tag.isEmpty {
+                    TagBadgeView(tag: account.tag)
                 }
             }
+            if !account.issuer.isEmpty {
+                Text(account.name)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 5)
         .padding(.horizontal, 4)
     }
 }

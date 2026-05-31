@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import Observation
 
 @MainActor
@@ -7,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let storageService = StorageService()
     private var statusItem: NSStatusItem!
     private var submenuDelegates: [SubMenuDelegate] = []
+    private var settingsWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -71,7 +73,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        let settingsItem = NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ",")
+        settingsItem.image = NSImage(systemSymbolName: "gear", accessibilityDescription: nil)
+        menu.addItem(settingsItem)
+        let quitItem = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        quitItem.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: nil)
+        menu.addItem(quitItem)
 
         statusItem.menu = menu
     }
@@ -83,6 +90,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             dict[key, default: []].append(acc)
         }
         return dict.keys.sorted().map { ($0, dict[$0]!) }
+    }
+
+    @objc private func openSettings() {
+        if settingsWindow == nil {
+            let hosting = NSHostingController(
+                rootView: SettingsView().environment(storageService)
+            )
+            let toolbar = NSToolbar(identifier: "settings")
+            toolbar.displayMode = .iconOnly
+
+            let window = NSWindow(contentViewController: hosting)
+            window.title = "qr2fa"
+            window.titleVisibility = .hidden
+            window.styleMask = [.titled, .closable, .resizable,
+                                .unifiedTitleAndToolbar, .fullSizeContentView]
+            window.toolbarStyle = .unified
+            window.toolbar = toolbar
+            window.setContentSize(NSSize(width: 960, height: 580))
+            window.minSize = NSSize(width: 760, height: 440)
+            window.center()
+            settingsWindow = window
+        }
+        settingsWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     @objc private func noOp() {}

@@ -92,7 +92,7 @@ final class AccountMenuItemView: NSView {
         if showCopied {
             codeColor = .systemGreen
         } else if !highlighted && remaining <= 5 {
-            codeColor = .systemRed
+            codeColor = .systemOrange
         } else {
             codeColor = textColor
         }

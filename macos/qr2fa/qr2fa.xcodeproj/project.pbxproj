@@ -8,29 +8,24 @@
 
 /* Begin PBXBuildFile section */
 		05D51B269ABE036A6F355C5E /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4506FFA3EC262CFA7C739475 /* StorageService.swift */; };
-		05FBD8B8E37FA8E0A15641D4 /* StorageSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EF064FBFAB7481717B07856 /* StorageSettingsView.swift */; };
 		0CC3A6BA472527E06CC133D0 /* AccountMenuItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED616089CB032DBD46721CF3 /* AccountMenuItemView.swift */; };
 		0F36F3866A221AA37520A4B8 /* TOTPGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93979A9D062AA2E1A03EDB8 /* TOTPGenerator.swift */; };
 		11A3598F5D47835AA6D56A2D /* QRCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8991D1C6B65A5866C508761B /* QRCaptureView.swift */; };
 		128B2AA2B01CF60772055C26 /* FileWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB705C1DD7C7B18A51F43252 /* FileWatcher.swift */; };
-		160FA490DC6B3D4E0A98940E /* AboutSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26D4BAEBA30A99C1A6CAD339 /* AboutSettingsView.swift */; };
 		24661C89CBFEFD21E7A1AF12 /* Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48BA6FC6E5EEE8F9646710E /* Account.swift */; };
 		28774D9D0EDE559F0F2C2CF1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C58CE58E6B1EF7F69F2209ED /* Assets.xcassets */; };
 		39DF4692F4AE86FD27669C12 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9DD71DAB18DB4EE4D3E34774 /* Vision.framework */; };
 		648AB564F78936D88854AE4E /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD851DCBE300C66BEFF8E74A /* SettingsView.swift */; };
 		7B6B3BA9B9D4077264D6B0FA /* StorageServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88408CF5542FBCAEF73C53B3 /* StorageServiceTests.swift */; };
 		9C05264088E598FCAC8E2579 /* PlaceholderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C1FA115DCA7679BDAA7781C /* PlaceholderTests.swift */; };
-		A37F22DEC3AD06C09CAD8AD1 /* AccountsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE8850AC78C65F9D13CA2CBC /* AccountsSettingsView.swift */; };
 		A3EF3DE80D032D4A3F4A7FCA /* ScreenCaptureKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C0C1542EA75DD7AC6ED065A /* ScreenCaptureKit.framework */; };
 		AF409432B44BF07BDB5A9B04 /* AccountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70A129B0D600674D2913C90 /* AccountTests.swift */; };
 		CE6043988BF08494C558F41D /* qr2faApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E3780EDA60632058320D35C /* qr2faApp.swift */; };
 		DF4A30EE2A5DE5D37A3EC2A7 /* TOTPGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03F34D82B7A1BCF1EC6B7E15 /* TOTPGeneratorTests.swift */; };
 		FCF51A7378F98C134BBD1B5F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 224EF6A8A2A51266EA1F4497 /* AppDelegate.swift */; };
-		AA0011223344556600000001 /* TimerDotsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0011223344556600000002 /* TimerDotsView.swift */; };
 		BB0011223344556600000001 /* MigrationParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0011223344556600000002 /* MigrationParser.swift */; };
 		CC0011223344556600000001 /* TagBadgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0011223344556600000002 /* TagBadgeView.swift */; };
 		EE0011223344556600000001 /* AccountAddSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0011223344556600000002 /* AccountAddSheet.swift */; };
-		DD0011223344556600000001 /* Account+Avatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0011223344556600000002 /* Account+Avatar.swift */; };
 		FF0011223344556600000001 /* AccountDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0011223344556600000002 /* AccountDetailView.swift */; };
 /* End PBXBuildFile section */
 
@@ -48,11 +43,9 @@
 		0069582156C606024B9B7962 /* qr2fa.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = qr2fa.entitlements; sourceTree = "<group>"; };
 		03F34D82B7A1BCF1EC6B7E15 /* TOTPGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TOTPGeneratorTests.swift; sourceTree = "<group>"; };
 		224EF6A8A2A51266EA1F4497 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		26D4BAEBA30A99C1A6CAD339 /* AboutSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutSettingsView.swift; sourceTree = "<group>"; };
 		4506FFA3EC262CFA7C739475 /* StorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
 		4C0C1542EA75DD7AC6ED065A /* ScreenCaptureKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ScreenCaptureKit.framework; path = System/Library/Frameworks/ScreenCaptureKit.framework; sourceTree = SDKROOT; };
 		4F4651FD4AF46A8B228B1D51 /* qr2fa.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = qr2fa.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		5EF064FBFAB7481717B07856 /* StorageSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageSettingsView.swift; sourceTree = "<group>"; };
 		7C1FA115DCA7679BDAA7781C /* PlaceholderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderTests.swift; sourceTree = "<group>"; };
 		88408CF5542FBCAEF73C53B3 /* StorageServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageServiceTests.swift; sourceTree = "<group>"; };
 		8991D1C6B65A5866C508761B /* QRCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCaptureView.swift; sourceTree = "<group>"; };
@@ -66,12 +59,9 @@
 		E70A129B0D600674D2913C90 /* AccountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTests.swift; sourceTree = "<group>"; };
 		ED616089CB032DBD46721CF3 /* AccountMenuItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountMenuItemView.swift; sourceTree = "<group>"; };
 		F0C7D43B89861E28DBD9C096 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		FE8850AC78C65F9D13CA2CBC /* AccountsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountsSettingsView.swift; sourceTree = "<group>"; };
-		AA0011223344556600000002 /* TimerDotsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerDotsView.swift; sourceTree = "<group>"; };
 		BB0011223344556600000002 /* MigrationParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationParser.swift; sourceTree = "<group>"; };
 		CC0011223344556600000002 /* TagBadgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagBadgeView.swift; sourceTree = "<group>"; };
 		EE0011223344556600000002 /* AccountAddSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountAddSheet.swift; sourceTree = "<group>"; };
-		DD0011223344556600000002 /* Account+Avatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Account+Avatar.swift"; sourceTree = "<group>"; };
 		FF0011223344556600000002 /* AccountDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDetailView.swift; sourceTree = "<group>"; };
 		FFDD44328F364C39D1148364 /* qr2faTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = qr2faTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -95,7 +85,6 @@
 				AC6AE969CAD16FC5F8710A8D /* Settings */,
 				ED616089CB032DBD46721CF3 /* AccountMenuItemView.swift */,
 				8991D1C6B65A5866C508761B /* QRCaptureView.swift */,
-				AA0011223344556600000002 /* TimerDotsView.swift */,
 				FF0011223344556600000002 /* AccountDetailView.swift */,
 			);
 			path = Views;
@@ -105,7 +94,6 @@
 			isa = PBXGroup;
 			children = (
 				D48BA6FC6E5EEE8F9646710E /* Account.swift */,
-				DD0011223344556600000002 /* Account+Avatar.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -134,12 +122,9 @@
 		AC6AE969CAD16FC5F8710A8D /* Settings */ = {
 			isa = PBXGroup;
 			children = (
-				26D4BAEBA30A99C1A6CAD339 /* AboutSettingsView.swift */,
-				FE8850AC78C65F9D13CA2CBC /* AccountsSettingsView.swift */,
 				CC0011223344556600000002 /* TagBadgeView.swift */,
 				EE0011223344556600000002 /* AccountAddSheet.swift */,
 				AD851DCBE300C66BEFF8E74A /* SettingsView.swift */,
-				5EF064FBFAB7481717B07856 /* StorageSettingsView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -283,20 +268,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				160FA490DC6B3D4E0A98940E /* AboutSettingsView.swift in Sources */,
 				24661C89CBFEFD21E7A1AF12 /* Account.swift in Sources */,
-				DD0011223344556600000001 /* Account+Avatar.swift in Sources */,
 				0CC3A6BA472527E06CC133D0 /* AccountMenuItemView.swift in Sources */,
-				A37F22DEC3AD06C09CAD8AD1 /* AccountsSettingsView.swift in Sources */,
 				FCF51A7378F98C134BBD1B5F /* AppDelegate.swift in Sources */,
 				128B2AA2B01CF60772055C26 /* FileWatcher.swift in Sources */,
 				11A3598F5D47835AA6D56A2D /* QRCaptureView.swift in Sources */,
 				648AB564F78936D88854AE4E /* SettingsView.swift in Sources */,
 				05D51B269ABE036A6F355C5E /* StorageService.swift in Sources */,
-				05FBD8B8E37FA8E0A15641D4 /* StorageSettingsView.swift in Sources */,
 				0F36F3866A221AA37520A4B8 /* TOTPGenerator.swift in Sources */,
 				CE6043988BF08494C558F41D /* qr2faApp.swift in Sources */,
-				AA0011223344556600000001 /* TimerDotsView.swift in Sources */,
 				BB0011223344556600000001 /* MigrationParser.swift in Sources */,
 				CC0011223344556600000001 /* TagBadgeView.swift in Sources */,
 				EE0011223344556600000001 /* AccountAddSheet.swift in Sources */,

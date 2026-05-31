@@ -4,6 +4,9 @@ import SwiftUI
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        Settings { EmptyView() }
+        // Settings 창은 AppDelegate에서 NSWindow로 직접 관리
+        WindowGroup { EmptyView() }
+            .defaultSize(width: 0, height: 0)
+            .commandsRemoved()
     }
 }

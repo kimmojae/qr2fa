@@ -135,48 +135,4 @@ final class AccountTests: XCTestCase {
         XCTAssertTrue(url.contains("secret=JBSWY3DPEHPK3PXP"))
     }
 
-    // MARK: - Avatar helpers
-
-    func test_avatarInitial_usesIssuerWhenPresent() {
-        let account = Account(
-            id: 1, name: "user@example.com", issuer: "GitHub",
-            secret: "SECRET", tag: "", algorithm: "SHA1", digits: 6,
-            period: 30, createdAt: Date()
-        )
-        XCTAssertEqual(account.avatarInitial, "G")
-    }
-
-    func test_avatarInitial_usesNameWhenIssuerEmpty() {
-        let account = Account(
-            id: 2, name: "alice@example.com", issuer: "",
-            secret: "SECRET", tag: "", algorithm: "SHA1", digits: 6,
-            period: 30, createdAt: Date()
-        )
-        XCTAssertEqual(account.avatarInitial, "A")
-    }
-
-    func test_avatarColor_isDeterministic() {
-        let a1 = Account(
-            id: 1, name: "user", issuer: "AWS",
-            secret: "S", tag: "", algorithm: "SHA1", digits: 6,
-            period: 30, createdAt: Date()
-        )
-        let a2 = Account(
-            id: 2, name: "user", issuer: "AWS",
-            secret: "S", tag: "", algorithm: "SHA1", digits: 6,
-            period: 30, createdAt: Date()
-        )
-        XCTAssertEqual(a1.avatarColor, a2.avatarColor)
-    }
-
-    func test_avatarColor_differentAccountsCanGetDifferentColors() {
-        let a = Account(id: 1, name: "alice", issuer: "GitHub", secret: "S", tag: "", algorithm: "SHA1", digits: 6, period: 30, createdAt: Date())
-        let b = Account(id: 2, name: "bob", issuer: "AWS", secret: "S", tag: "", algorithm: "SHA1", digits: 6, period: 30, createdAt: Date())
-        // 두 계정의 색상 인덱스가 계산 가능한지 확인 (다를 수도, 같을 수도 있음 — 결정론적이기만 하면 됨)
-        let colorA = a.avatarColor
-        let colorB = b.avatarColor
-        // 같은 입력 → 항상 같은 출력
-        XCTAssertEqual(colorA, a.avatarColor)
-        XCTAssertEqual(colorB, b.avatarColor)
-    }
 }

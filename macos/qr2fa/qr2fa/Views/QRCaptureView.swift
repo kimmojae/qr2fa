@@ -83,11 +83,11 @@ struct QRCaptureView: View {
         do {
             let cgImage = try await captureScreen()
             let urls = try await detectQRCodes(in: cgImage)
-                .filter { $0.hasPrefix("otpauth://totp/") }
+                .filter { $0.hasPrefix("otpauth://totp/") || $0.hasPrefix("otpauth-migration://") }
 
             await MainActor.run {
                 if urls.isEmpty {
-                    status = .failed("otpauth:// QR 코드를 찾을 수 없습니다.\n화면에 QR 코드가 보이는지 확인하세요.")
+                    status = .failed("QR 코드를 찾을 수 없습니다.\n화면에 QR 코드가 보이는지 확인하세요.")
                 } else if urls.count == 1 {
                     onCapture(urls[0])
                     dismiss()
