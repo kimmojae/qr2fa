@@ -59,7 +59,7 @@ struct SettingsView: View {
                 ContentUnavailableView(
                     "계정을 선택하세요",
                     systemImage: "qrcode",
-                    description: Text("왼쪽 목록에서 계정을 선택하면\nQR 코드와 인증 코드를 볼 수 있습니다.")
+                    description: Text("왼쪽 목록에서 계정을 선택하면 QR 코드와 인증 코드를 볼 수 있습니다.")
                 )
             }
         }
@@ -71,7 +71,7 @@ struct SettingsView: View {
                     Text("편집")
                 }
                 .buttonStyle(.bordered)
-                .disabled(selectedAccount == nil)
+                .disabled(true)
                 .help("계정 편집")
 
                 Button {
