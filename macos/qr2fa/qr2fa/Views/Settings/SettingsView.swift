@@ -53,7 +53,15 @@ struct SettingsView: View {
             .listStyle(.inset)
             .navigationSplitViewColumnWidth(min: 200, ideal: 240)
         } detail: {
-            Color.clear
+            if let account = selectedAccount {
+                AccountDetailView(account: account)
+            } else {
+                ContentUnavailableView(
+                    "계정을 선택하세요",
+                    systemImage: "qrcode",
+                    description: Text("왼쪽 목록에서 계정을 선택하면\nQR 코드와 인증 코드를 볼 수 있습니다.")
+                )
+            }
         }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
