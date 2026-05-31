@@ -134,4 +134,38 @@ final class AccountTests: XCTestCase {
         XCTAssertFalse(url.contains("issuer="))
         XCTAssertTrue(url.contains("secret=JBSWY3DPEHPK3PXP"))
     }
+
+    // MARK: - Avatar helpers
+
+    func test_avatarInitial_usesIssuerWhenPresent() {
+        let account = Account(
+            id: 1, name: "user@example.com", issuer: "GitHub",
+            secret: "SECRET", tag: "", algorithm: "SHA1", digits: 6,
+            period: 30, createdAt: Date()
+        )
+        XCTAssertEqual(account.avatarInitial, "G")
+    }
+
+    func test_avatarInitial_usesNameWhenIssuerEmpty() {
+        let account = Account(
+            id: 2, name: "alice@example.com", issuer: "",
+            secret: "SECRET", tag: "", algorithm: "SHA1", digits: 6,
+            period: 30, createdAt: Date()
+        )
+        XCTAssertEqual(account.avatarInitial, "A")
+    }
+
+    func test_avatarColor_isDeterministic() {
+        let a1 = Account(
+            id: 1, name: "user", issuer: "AWS",
+            secret: "S", tag: "", algorithm: "SHA1", digits: 6,
+            period: 30, createdAt: Date()
+        )
+        let a2 = Account(
+            id: 2, name: "user", issuer: "AWS",
+            secret: "S", tag: "", algorithm: "SHA1", digits: 6,
+            period: 30, createdAt: Date()
+        )
+        XCTAssertEqual(a1.avatarColor, a2.avatarColor)
+    }
 }
