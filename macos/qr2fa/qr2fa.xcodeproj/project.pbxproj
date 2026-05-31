@@ -31,6 +31,7 @@
 		CC0011223344556600000001 /* TagBadgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0011223344556600000002 /* TagBadgeView.swift */; };
 		EE0011223344556600000001 /* AccountAddSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0011223344556600000002 /* AccountAddSheet.swift */; };
 		DD0011223344556600000001 /* Account+Avatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0011223344556600000002 /* Account+Avatar.swift */; };
+		FF0011223344556600000001 /* AccountDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0011223344556600000002 /* AccountDetailView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -71,6 +72,7 @@
 		CC0011223344556600000002 /* TagBadgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagBadgeView.swift; sourceTree = "<group>"; };
 		EE0011223344556600000002 /* AccountAddSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountAddSheet.swift; sourceTree = "<group>"; };
 		DD0011223344556600000002 /* Account+Avatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Account+Avatar.swift"; sourceTree = "<group>"; };
+		FF0011223344556600000002 /* AccountDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDetailView.swift; sourceTree = "<group>"; };
 		FFDD44328F364C39D1148364 /* qr2faTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = qr2faTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -94,6 +96,7 @@
 				ED616089CB032DBD46721CF3 /* AccountMenuItemView.swift */,
 				8991D1C6B65A5866C508761B /* QRCaptureView.swift */,
 				AA0011223344556600000002 /* TimerDotsView.swift */,
+				FF0011223344556600000002 /* AccountDetailView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -297,6 +300,7 @@
 				BB0011223344556600000001 /* MigrationParser.swift in Sources */,
 				CC0011223344556600000001 /* TagBadgeView.swift in Sources */,
 				EE0011223344556600000001 /* AccountAddSheet.swift in Sources */,
+				FF0011223344556600000001 /* AccountDetailView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
