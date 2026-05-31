@@ -7,6 +7,7 @@ struct AccountDetailView: View {
 
     @State private var totpCode: String = "------"
     @State private var remaining: Int = 30
+    @State private var qrImage: NSImage?
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -45,7 +46,10 @@ struct AccountDetailView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
         }
-        .onAppear { refreshTOTP() }
+        .onAppear {
+            qrImage = generateQRImage()
+            refreshTOTP()
+        }
         .onReceive(timer) { _ in refreshTOTP() }
     }
 
@@ -99,10 +103,10 @@ struct AccountDetailView: View {
                 .textCase(.uppercase)
                 .kerning(0.5)
 
-            if let qrImage = generateQRImage() {
+            if let qrImage {
                 Image(nsImage: qrImage)
-                    .interpolation(.none)
                     .resizable()
+                    .interpolation(.none)
                     .scaledToFit()
                     .frame(width: 150, height: 150)
                     .padding(10)
