@@ -12,6 +12,7 @@ struct AccountDetailView: View {
     @State private var showSecretCopied = false
     @State private var isHoveringTOTP = false
     @State private var secretRevealed = false
+    @State private var qrRevealed = false
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -170,6 +171,12 @@ struct AccountDetailView: View {
                     .textCase(.uppercase)
                     .kerning(0.5)
                 Spacer()
+                Button { qrRevealed.toggle() } label: {
+                    Image(systemName: qrRevealed ? "eye.slash" : "eye")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
                 Button { saveQRImage() } label: {
                     Image(systemName: "square.and.arrow.down")
                         .font(.system(size: 12))
@@ -188,6 +195,8 @@ struct AccountDetailView: View {
                     .padding(8)
                     .background(Color.white)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .blur(radius: qrRevealed ? 0 : 12)
+                    .animation(.easeInOut(duration: 0.2), value: qrRevealed)
                     .frame(maxWidth: .infinity)
             }
         }
