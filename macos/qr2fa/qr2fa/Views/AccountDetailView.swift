@@ -9,13 +9,15 @@ struct AccountDetailView: View {
     @State private var remaining: Int = 30
     @State private var qrImage: NSImage?
     @State private var showCopied = false
+    @State private var showSecretCopied = false
     @State private var isHoveringTOTP = false
+    @State private var secretRevealed = false
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 16) {
+            VStack(spacing: 12) {
                 // 계정 정보 카드
                 accountInfoCard
 
@@ -26,7 +28,7 @@ struct AccountDetailView: View {
                 qrCard
             }
             .padding(.horizontal, 16)
-            .padding(.bottom, 24)
+            .padding(.bottom, 12)
         }
         .onAppear {
             qrImage = generateQRImage()
@@ -38,7 +40,7 @@ struct AccountDetailView: View {
     // MARK: - Subviews
 
     private var accountInfoCard: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 5) {
             Text("서비스")
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(.secondary)
@@ -48,7 +50,7 @@ struct AccountDetailView: View {
                 .font(.system(size: 15, weight: .semibold))
 
             Divider()
-                .padding(.vertical, 2)
+                .padding(.vertical, 1)
 
             Text("계정")
                 .font(.system(size: 10, weight: .medium))
@@ -61,7 +63,7 @@ struct AccountDetailView: View {
 
             if !account.tag.isEmpty {
                 Divider()
-                    .padding(.vertical, 2)
+                    .padding(.vertical, 1)
 
                 Text("태그")
                     .font(.system(size: 10, weight: .medium))
@@ -70,12 +72,49 @@ struct AccountDetailView: View {
                     .kerning(0.5)
                 TagBadgeView(tag: account.tag)
             }
+
+            Divider()
+                .padding(.vertical, 1)
+
+            Text("시크릿 키")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .kerning(0.5)
+            HStack(spacing: 6) {
+                Text(secretRevealed ? account.secret : String(repeating: "•", count: min(account.secret.count, 24)))
+                    .font(.system(size: 13, weight: .medium, design: secretRevealed ? .monospaced : .default))
+                    .foregroundStyle(showSecretCopied ? .green : (secretRevealed ? .primary : .secondary))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .animation(.easeInOut(duration: 0.15), value: showSecretCopied)
+                Spacer()
+                Button {
+                    secretRevealed.toggle()
+                } label: {
+                    Image(systemName: secretRevealed ? "eye.slash" : "eye")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(account.secret, forType: .string)
+                    showSecretCopied = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { showSecretCopied = false }
+                } label: {
+                    Image(systemName: showSecretCopied ? "checkmark" : "doc.on.doc")
+                        .font(.system(size: 11))
+                        .foregroundStyle(showSecretCopied ? .green : .secondary)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .background(Color(nsColor: NSColor(red: 0.17, green: 0.17, blue: 0.18, alpha: 1)))
         .clipShape(RoundedRectangle(cornerRadius: 10))
-        .padding(.top, 16)
+        .padding(.top, 8)
     }
 
     private var totpCard: some View {
@@ -88,7 +127,7 @@ struct AccountDetailView: View {
                     .kerning(0.5)
 
                 Text(showCopied ? "Copied!" : TOTPGenerator.formattedCode(totpCode))
-                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                    .font(.system(size: 22, weight: .bold, design: .monospaced))
                     .foregroundStyle(showCopied ? Color.green : (remaining <= 5 ? Color.orange : Color.primary))
             }
 
@@ -113,7 +152,7 @@ struct AccountDetailView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(14)
+        .padding(10)
         .background(isHoveringTOTP
             ? Color(nsColor: NSColor(red: 0.22, green: 0.22, blue: 0.23, alpha: 1))
             : Color(nsColor: NSColor(red: 0.17, green: 0.17, blue: 0.18, alpha: 1)))
@@ -124,19 +163,29 @@ struct AccountDetailView: View {
 
     private var qrCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("QR 코드")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .kerning(0.5)
+            HStack {
+                Text("QR 코드")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .kerning(0.5)
+                Spacer()
+                Button { saveQRImage() } label: {
+                    Image(systemName: "square.and.arrow.down")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .disabled(qrImage == nil)
+            }
 
             if let qrImage {
                 Image(nsImage: qrImage)
                     .resizable()
                     .interpolation(.none)
                     .scaledToFit()
-                    .frame(width: 150, height: 150)
-                    .padding(10)
+                    .frame(width: 130, height: 130)
+                    .padding(8)
                     .background(Color.white)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .frame(maxWidth: .infinity)
@@ -162,6 +211,20 @@ struct AccountDetailView: View {
     private func refreshTOTP() {
         totpCode = (try? TOTPGenerator.generate(account: account)) ?? "------"
         remaining = TOTPGenerator.remainingSeconds(period: account.period)
+    }
+
+    private func saveQRImage() {
+        guard let image = qrImage else { return }
+        let panel = NSSavePanel()
+        let filename = account.issuer.isEmpty ? account.name : "\(account.issuer)-\(account.name)"
+        panel.nameFieldStringValue = "\(filename)-qr.png"
+        panel.allowedContentTypes = [.png]
+        panel.canCreateDirectories = true
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard let tiff = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiff),
+              let png = bitmap.representation(using: .png, properties: [:]) else { return }
+        try? png.write(to: url)
     }
 
     private func generateQRImage() -> NSImage? {
