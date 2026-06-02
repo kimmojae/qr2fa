@@ -57,8 +57,11 @@ struct SettingsView: View {
             }
         } detail: {
             if let account = selectedAccount {
-                AccountDetailView(account: account, isEditing: $isEditingAccount)
-                    .environment(storageService)
+                AccountDetailView(account: account, isEditing: $isEditingAccount) {
+                    selectedAccountID = nil
+                    isEditingAccount = false
+                }
+                .environment(storageService)
             } else {
                 ContentUnavailableView(
                     "계정을 선택하세요",

@@ -5,6 +5,7 @@ import CoreImage.CIFilterBuiltins
 struct AccountDetailView: View {
     let account: Account
     @Binding var isEditing: Bool
+    var onDelete: () -> Void = {}
 
     @Environment(StorageService.self) private var storageService
     @State private var draftName: String = ""
@@ -42,6 +43,10 @@ struct AccountDetailView: View {
             if isEditing {
                 Divider()
                 HStack {
+                    Button(role: .destructive) { deleteAccount() } label: {
+                        Image(systemName: "trash")
+                    }
+                    .buttonStyle(.bordered)
                     Button("취소") { cancelEdits() }
                         .buttonStyle(.bordered)
                         .keyboardShortcut(.escape, modifiers: [])
@@ -317,5 +322,19 @@ struct AccountDetailView: View {
         draftName = account.name
         draftTag = account.tag
         isEditing = false
+    }
+
+    private func deleteAccount() {
+        let alert = NSAlert()
+        let displayName = account.issuer.isEmpty ? account.name : account.issuer
+        alert.messageText = "\(displayName) 계정을 삭제할까요?"
+        alert.informativeText = "되돌릴 수 없습니다."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "삭제")
+        alert.addButton(withTitle: "취소")
+        alert.buttons[0].hasDestructiveAction = true
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        guard (try? storageService.delete(id: account.id)) != nil else { return }
+        onDelete()
     }
 }
