@@ -4,6 +4,12 @@ import CoreImage.CIFilterBuiltins
 
 struct AccountDetailView: View {
     let account: Account
+    @Binding var isEditing: Bool
+
+    @Environment(StorageService.self) private var storageService
+    @State private var draftName: String = ""
+    @State private var draftTag: String = ""
+    @State private var showTagPopover = false
 
     @State private var totpCode: String = "------"
     @State private var remaining: Int = 30
@@ -17,25 +23,56 @@ struct AccountDetailView: View {
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 12) {
-                // 계정 정보 카드
-                accountInfoCard
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: 12) {
+                    // 계정 정보 카드
+                    accountInfoCard
 
-                // TOTP 카드
-                totpCard
+                    // TOTP 카드
+                    totpCard
 
-                // QR 카드
-                qrCard
+                    // QR 카드
+                    qrCard
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 12)
+
+            if isEditing {
+                Divider()
+                HStack {
+                    Button("취소") { cancelEdits() }
+                        .buttonStyle(.bordered)
+                        .keyboardShortcut(.escape, modifiers: [])
+                    Spacer()
+                    Button("저장") { saveEdits() }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(draftName.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .keyboardShortcut(.return, modifiers: .command)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+            }
         }
         .onAppear {
             qrImage = generateQRImage()
             refreshTOTP()
+            draftName = account.name
+            draftTag = account.tag
         }
         .onReceive(timer) { _ in refreshTOTP() }
+        .onChange(of: account.id) {
+            draftName = account.name
+            draftTag = account.tag
+            qrImage = generateQRImage()
+        }
+        .onChange(of: isEditing) { _, editing in
+            if editing {
+                draftName = account.name
+                draftTag = account.tag
+            }
+        }
     }
 
     // MARK: - Subviews
@@ -58,11 +95,17 @@ struct AccountDetailView: View {
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
                 .kerning(0.5)
-            Text(account.name)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(account.issuer.isEmpty ? .secondary : .primary)
+            if isEditing {
+                TextField("계정명", text: $draftName)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 14, weight: .medium))
+            } else {
+                Text(account.name)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(account.issuer.isEmpty ? .secondary : .primary)
+            }
 
-            if !account.tag.isEmpty {
+            if isEditing || !account.tag.isEmpty {
                 Divider()
                     .padding(.vertical, 1)
 
@@ -71,7 +114,18 @@ struct AccountDetailView: View {
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
                     .kerning(0.5)
-                TagBadgeView(tag: account.tag)
+                if isEditing {
+                    HStack {
+                        TagBadgeView(tag: draftTag, showEditHint: true)
+                            .onTapGesture { showTagPopover = true }
+                            .popover(isPresented: $showTagPopover, arrowEdge: .bottom) {
+                                TagSelectorPopover(tag: $draftTag)
+                            }
+                        Spacer()
+                    }
+                } else {
+                    TagBadgeView(tag: account.tag)
+                }
             }
 
             Divider()
@@ -248,5 +302,20 @@ struct AccountDetailView: View {
         let image = NSImage(size: rep.size)
         image.addRepresentation(rep)
         return image
+    }
+
+    private func saveEdits() {
+        var updated = account
+        updated.name = draftName.trimmingCharacters(in: .whitespaces)
+        updated.tag = draftTag
+        guard !updated.name.isEmpty else { return }
+        guard (try? storageService.update(updated)) != nil else { return }
+        isEditing = false
+    }
+
+    private func cancelEdits() {
+        draftName = account.name
+        draftTag = account.tag
+        isEditing = false
     }
 }

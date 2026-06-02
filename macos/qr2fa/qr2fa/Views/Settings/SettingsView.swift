@@ -5,6 +5,7 @@ struct SettingsView: View {
     @State private var selectedIssuer: String? = nil
     @State private var selectedAccountID: Int? = nil
     @State private var showingAddSheet = false
+    @State private var isEditingAccount: Bool = false
 
     private var issuers: [String] {
         let all = storageService.accounts.map { $0.issuer.isEmpty ? $0.name : $0.issuer }
@@ -51,9 +52,13 @@ struct SettingsView: View {
             }
             .listStyle(.inset)
             .navigationSplitViewColumnWidth(min: 200, ideal: 240)
+            .onChange(of: selectedAccountID) {
+                isEditingAccount = false
+            }
         } detail: {
             if let account = selectedAccount {
-                AccountDetailView(account: account)
+                AccountDetailView(account: account, isEditing: $isEditingAccount)
+                    .environment(storageService)
             } else {
                 ContentUnavailableView(
                     "계정을 선택하세요",
@@ -64,21 +69,29 @@ struct SettingsView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                Button {
-                } label: {
-                    Text("편집")
-                }
-                .buttonStyle(.bordered)
-                .disabled(true)
-                .help("계정 편집")
+                if isEditingAccount {
+                    Button("편집 취소") {
+                        isEditingAccount = false
+                    }
+                    .buttonStyle(.bordered)
+                } else {
+                    Button {
+                        isEditingAccount = true
+                    } label: {
+                        Text("편집")
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(selectedAccount == nil)
+                    .help("계정 편집")
 
-                Button {
-                    showingAddSheet = true
-                } label: {
-                    Image(systemName: "plus")
+                    Button {
+                        showingAddSheet = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .buttonStyle(.bordered)
+                    .help("계정 추가")
                 }
-                .buttonStyle(.bordered)
-                .help("계정 추가")
             }
         }
         .sheet(isPresented: $showingAddSheet) {
