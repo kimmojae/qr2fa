@@ -12,6 +12,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        // SwiftUI WindowGroup이 자동 생성하는 빈 창을 닫음
+        NSApp.windows.forEach { $0.close() }
         setupMainMenu()
         do { try storageService.load() } catch {
             NSLog("qr2fa: load failed: \(error)")
@@ -129,13 +131,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.setContentSize(NSSize(width: 960, height: 580))
             window.minSize = NSSize(width: 760, height: 440)
             window.center()
+            window.delegate = self
             settingsWindow = window
         }
+        NSApp.setActivationPolicy(.regular)
         settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
     @objc private func noOp() {}
+}
+
+// MARK: - NSWindowDelegate
+
+extension AppDelegate: NSWindowDelegate {
+    func windowWillClose(_ notification: Notification) {
+        settingsWindow = nil
+        NSApp.setActivationPolicy(.accessory)
+    }
 }
 
 // MARK: - SubMenuDelegate
