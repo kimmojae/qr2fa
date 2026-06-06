@@ -14,6 +14,7 @@ dist/
 
 # Xcode build artifacts
 macos/build/
+macos/build.noindex/
 macos/qr2fa/build/
 macos/qr2fa/*.xcodeproj/xcuserdata/
 macos/qr2fa/*.xcodeproj/project.xcworkspace/xcuserdata/
