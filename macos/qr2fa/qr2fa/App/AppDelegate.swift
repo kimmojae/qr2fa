@@ -116,16 +116,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let hosting = NSHostingController(
                 rootView: SettingsView().environment(storageService)
             )
+            // 통합 타이틀바 + 제목 표시 + SwiftUI .toolbar 항목을 오른쪽에 배치하기 위한 툴바.
+            let toolbar = NSToolbar(identifier: "settings")
+            toolbar.displayMode = .iconOnly
 
             let window = NSWindow(contentViewController: hosting)
             window.title = "qr2fa"
-            window.titleVisibility = .hidden
+            window.titleVisibility = .visible
             window.styleMask = [.titled, .closable, .resizable,
                                 .unifiedTitleAndToolbar, .fullSizeContentView]
             window.toolbarStyle = .unified
-            // 툴바는 SwiftUI(.toolbar)가 NSHostingController를 통해 직접 관리한다.
-            // 여기서 빈 NSToolbar를 따로 지정하면 SwiftUI 항목을 덮어써서
-            // 첫 진입 시 편집/+ 버튼이 사라지는 버그가 생긴다.
+            window.toolbar = toolbar
             window.setContentSize(NSSize(width: 960, height: 580))
             window.minSize = NSSize(width: 760, height: 440)
             window.center()
