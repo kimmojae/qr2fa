@@ -35,7 +35,7 @@ struct SettingsView: View {
                 if !issuers.isEmpty {
                     Section("서비스") {
                         ForEach(issuers, id: \.self) { issuer in
-                            Label(issuer, systemImage: "lock.shield")
+                            Text(issuer)
                                 .tag(issuer)
                         }
                     }
@@ -43,6 +43,11 @@ struct SettingsView: View {
             }
             .navigationSplitViewColumnWidth(min: 160, ideal: 180)
             .onAppear { selectedIssuer = "__all__" }
+            .onChange(of: selectedIssuer) {
+                // 서비스 그룹을 바꾸면 편집 상태를 끄고 그 그룹의 첫 번째 계정을 선택한다.
+                isEditingAccount = false
+                selectedAccountID = listedAccounts.first?.id
+            }
         } content: {
             List(selection: $selectedAccountID) {
                 ForEach(listedAccounts) { account in
