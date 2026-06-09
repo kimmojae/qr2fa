@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct AccountAddSheet: View {
-    let prefilledIssuer: String?
     @Environment(StorageService.self) private var storageService
     @Environment(\.dismiss) private var dismiss
 
@@ -11,7 +10,6 @@ struct AccountAddSheet: View {
 
     // Single-account QR state
     @State private var parsedAccount: Account?
-    @State private var showSingleConfirm = false
 
     // Migration state
     @State private var migrationAccounts: [MigrationEntry] = []
@@ -90,9 +88,6 @@ struct AccountAddSheet: View {
                 showingQRCapture = false
             }
             .environment(storageService)
-        }
-        .onAppear {
-            if let issuer = prefilledIssuer { self.issuer = issuer }
         }
     }
 
@@ -195,9 +190,7 @@ struct AccountAddSheet: View {
                 .padding(.vertical, 3)
             }
         }
-        .padding(12)
-        .background(Color.secondary.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .infoCardStyle()
     }
 
     private func singleAccountConfirm(_ acc: Account) -> some View {
@@ -230,9 +223,7 @@ struct AccountAddSheet: View {
                 }
             }
         }
-        .padding(12)
-        .background(Color.secondary.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .infoCardStyle()
     }
 
     // MARK: - Manual Pane
@@ -294,12 +285,12 @@ struct AccountAddSheet: View {
             let accounts = MigrationParser.parse(url: urlString) ?? []
             migrationAccounts = accounts.map { acc in
                 var entry = MigrationEntry(account: acc)
-                if let existing = storageService.accounts.first(where: {
-                    $0.secret.uppercased().trimmingCharacters(in: CharacterSet(charactersIn: "=")) ==
-                    acc.secret.uppercased().trimmingCharacters(in: CharacterSet(charactersIn: "="))
-                }) {
-                    _ = existing
-                    entry.skip = true
+                // 이미 있는 시크릿이면 기본적으로 건너뛴다.
+                let normalize: (String) -> String = {
+                    $0.uppercased().trimmingCharacters(in: CharacterSet(charactersIn: "="))
+                }
+                entry.skip = storageService.accounts.contains {
+                    normalize($0.secret) == normalize(acc.secret)
                 }
                 return entry
             }
@@ -369,5 +360,14 @@ struct AccountAddSheet: View {
         let clean = secretParam.uppercased().trimmingCharacters(in: CharacterSet(charactersIn: "= "))
         return Account(id: 0, name: name, issuer: issuer, secret: clean, tag: "",
                        algorithm: algorithm, digits: digits, period: period, createdAt: Date())
+    }
+}
+
+private extension View {
+    /// 미리보기/확인 영역에 쓰는 연한 카드 스타일.
+    func infoCardStyle() -> some View {
+        padding(12)
+            .background(Color.secondary.opacity(0.06))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }

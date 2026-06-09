@@ -6,13 +6,21 @@ import Observation
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
     let storageService = StorageService()
+    /// SwiftUI 쪽에서 주입하는 설정 창 열기 액션(openWindow).
+    var presentSettings: (() -> Void)?
     private var statusItem: NSStatusItem!
     private var submenuDelegates: [SubMenuDelegate] = []
-    private var settingsWindow: NSWindow?
+    private weak var settingsWindow: NSWindow?
+
+    // 메뉴바 앱이므로 설정 창을 닫아도 앱이 종료되면 안 된다.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        setupMainMenu()
+        // 메인 메뉴는 SwiftUI(App 씬)가 표준 구성으로 만든다. 직접 덮어쓰지 않아야
+        // Edit 메뉴(cmd+X/C/V)와 Quit(cmd+Q)가 살아있다.
         do { try storageService.load() } catch {
             NSLog("qr2fa: load failed: \(error)")
         }
@@ -20,22 +28,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         observeAccounts()
     }
 
-    private func setupMainMenu() {
-        let mainMenu = NSMenu()
-
-        let appMenuItem = NSMenuItem()
-        mainMenu.addItem(appMenuItem)
-        let appMenu = NSMenu()
-        appMenuItem.submenu = appMenu
-        appMenu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
-
-        let windowMenuItem = NSMenuItem()
-        mainMenu.addItem(windowMenuItem)
-        let windowMenu = NSMenu(title: "Window")
-        windowMenuItem.submenu = windowMenu
-        windowMenu.addItem(NSMenuItem(title: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w"))
-
-        NSApp.mainMenu = mainMenu
+    /// SwiftUI Window 씬이 만든 설정 창. (상태바 창은 canBecomeMain == false 라 제외된다)
+    private func settingsSceneWindow() -> NSWindow? {
+        NSApp.windows.first { $0.canBecomeMain }
     }
 
     private func setupStatusItem() {
@@ -112,42 +107,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func openSettings() {
-        if settingsWindow == nil {
-            let hosting = NSHostingController(
-                rootView: SettingsView().environment(storageService)
-            )
-            // 통합 타이틀바 + 제목 표시 + SwiftUI .toolbar 항목을 오른쪽에 배치하기 위한 툴바.
-            let toolbar = NSToolbar(identifier: "settings")
-            toolbar.displayMode = .iconOnly
-
-            let window = NSWindow(contentViewController: hosting)
-            window.title = "qr2fa"
-            window.titleVisibility = .visible
-            window.styleMask = [.titled, .closable, .resizable,
-                                .unifiedTitleAndToolbar, .fullSizeContentView]
-            window.toolbarStyle = .unified
-            window.toolbar = toolbar
-            window.setContentSize(NSSize(width: 960, height: 580))
-            window.minSize = NSSize(width: 760, height: 440)
-            window.center()
-            window.delegate = self
-            settingsWindow = window
+        // 상태바 메뉴가 닫힌 뒤(다음 런루프) 실행한다.
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            NSApp.setActivationPolicy(.regular)
+            NSApp.activate(ignoringOtherApps: true)
+            // SwiftUI가 소유한 Window 씬을 openWindow 액션으로 연다.
+            self.presentSettings?()
+            // 창이 뜬 뒤, 닫힘을 관찰해 다시 액세서리 모드로 돌리고 위치를 보정한다.
+            DispatchQueue.main.async {
+                guard let window = self.settingsSceneWindow() else { return }
+                if self.settingsWindow !== window {
+                    self.settingsWindow = window
+                    NotificationCenter.default.addObserver(
+                        self,
+                        selector: #selector(self.settingsWindowWillClose(_:)),
+                        name: NSWindow.willCloseNotification,
+                        object: window
+                    )
+                }
+                window.toolbarStyle = .unified
+                // 씬이 복원한 위치가 화면 밖이면 가운데로.
+                if !NSScreen.screens.contains(where: { $0.frame.intersects(window.frame) }) {
+                    window.center()
+                }
+            }
         }
-        NSApp.setActivationPolicy(.regular)
-        settingsWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    @objc private func settingsWindowWillClose(_ note: Notification) {
+        NSApp.setActivationPolicy(.accessory)
     }
 
     @objc private func noOp() {}
-}
-
-// MARK: - NSWindowDelegate
-
-extension AppDelegate: NSWindowDelegate {
-    func windowWillClose(_ notification: Notification) {
-        settingsWindow = nil
-        NSApp.setActivationPolicy(.accessory)
-    }
 }
 
 // MARK: - SubMenuDelegate

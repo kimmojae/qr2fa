@@ -103,7 +103,7 @@ struct SettingsView: View {
             }
         }
         .sheet(isPresented: $showingAddSheet) {
-            AccountAddSheet(prefilledIssuer: nil).environment(storageService)
+            AccountAddSheet().environment(storageService)
         }
     }
 }

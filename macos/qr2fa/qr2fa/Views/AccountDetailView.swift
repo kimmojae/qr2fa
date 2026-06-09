@@ -84,22 +84,14 @@ struct AccountDetailView: View {
 
     private var accountInfoCard: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text("서비스")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .kerning(0.5)
+            sectionLabel("서비스")
             Text(account.issuer.isEmpty ? account.name : account.issuer)
                 .font(.system(size: 15, weight: .semibold))
 
             Divider()
                 .padding(.vertical, 1)
 
-            Text("계정")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .kerning(0.5)
+            sectionLabel("계정")
             if isEditing {
                 TextField("계정명", text: $draftName)
                     .textFieldStyle(.roundedBorder)
@@ -114,11 +106,7 @@ struct AccountDetailView: View {
                 Divider()
                     .padding(.vertical, 1)
 
-                Text("태그")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .kerning(0.5)
+                sectionLabel("태그")
                 if isEditing {
                     HStack {
                         TagBadgeView(tag: draftTag, showEditHint: true)
@@ -136,11 +124,7 @@ struct AccountDetailView: View {
             Divider()
                 .padding(.vertical, 1)
 
-            Text("시크릿 키")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .kerning(0.5)
+            sectionLabel("시크릿 키")
             HStack(spacing: 6) {
                 Text(secretRevealed ? account.secret : String(repeating: "•", count: min(account.secret.count, 24)))
                     .font(.system(size: 13, weight: .medium, design: secretRevealed ? .monospaced : .default))
@@ -172,7 +156,7 @@ struct AccountDetailView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(Color(nsColor: NSColor(red: 0.17, green: 0.17, blue: 0.18, alpha: 1)))
+        .background(Color.detailCard)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .padding(.top, 8)
     }
@@ -180,11 +164,7 @@ struct AccountDetailView: View {
     private var totpCard: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("인증 코드")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .kerning(0.5)
+                sectionLabel("인증 코드")
 
                 Text(showCopied ? "Copied!" : TOTPGenerator.formattedCode(totpCode))
                     .font(.system(size: 22, weight: .bold, design: .monospaced))
@@ -213,9 +193,7 @@ struct AccountDetailView: View {
             }
         }
         .padding(10)
-        .background(isHoveringTOTP
-            ? Color(nsColor: NSColor(red: 0.22, green: 0.22, blue: 0.23, alpha: 1))
-            : Color(nsColor: NSColor(red: 0.17, green: 0.17, blue: 0.18, alpha: 1)))
+        .background(isHoveringTOTP ? Color.detailCardHover : Color.detailCard)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .onHover { isHoveringTOTP = $0 }
         .onTapGesture { copyCode() }
@@ -224,11 +202,7 @@ struct AccountDetailView: View {
     private var qrCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("QR 코드")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .kerning(0.5)
+                sectionLabel("QR 코드")
                 Spacer()
                 Button { qrRevealed.toggle() } label: {
                     Image(systemName: qrRevealed ? "eye.slash" : "eye")
@@ -261,7 +235,7 @@ struct AccountDetailView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(Color(nsColor: NSColor(red: 0.17, green: 0.17, blue: 0.18, alpha: 1)))
+        .background(Color.detailCard)
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
@@ -337,4 +311,18 @@ struct AccountDetailView: View {
         guard (try? storageService.delete(id: account.id)) != nil else { return }
         onDelete()
     }
+}
+
+/// 카드 안에서 반복되는 섹션 제목 라벨(작은 대문자 회색).
+private func sectionLabel(_ text: String) -> some View {
+    Text(text)
+        .font(.system(size: 10, weight: .medium))
+        .foregroundStyle(.secondary)
+        .textCase(.uppercase)
+        .kerning(0.5)
+}
+
+private extension Color {
+    static let detailCard = Color(nsColor: NSColor(red: 0.17, green: 0.17, blue: 0.18, alpha: 1))
+    static let detailCardHover = Color(nsColor: NSColor(red: 0.22, green: 0.22, blue: 0.23, alpha: 1))
 }

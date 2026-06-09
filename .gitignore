@@ -27,6 +27,10 @@ DerivedData/
 # Output of the go coverage tool
 *.out
 
+# LLVM/Swift coverage & profiling raw data
+*.profraw
+*.profdata
+
 # Go workspace file
 go.work
 

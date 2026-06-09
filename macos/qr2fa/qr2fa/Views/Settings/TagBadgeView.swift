@@ -31,7 +31,7 @@ struct TagBadgeView: View {
         case "staging": return .purple
         case "rnd":     return .green
         case "all":     return .purple
-        default:        return tag.isEmpty ? Color.secondary : .secondary
+        default:        return .secondary
         }
     }
 }
