@@ -121,4 +121,21 @@ final class StorageServiceTests: XCTestCase {
         )
         XCTAssertThrowsError(try service.update(nonexistent))
     }
+
+    func test_locationKind_customWhenPathOverridden() throws {
+        let service = StorageService(path: tempPath)
+        XCTAssertEqual(service.locationKind, .custom)
+    }
+
+    func test_classifyPath_iCloud() {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let path = "\(home)/Library/Mobile Documents/com~apple~CloudDocs/.qr2fa/accounts.json"
+        XCTAssertEqual(StorageService.classifyPath(path), .iCloud)
+    }
+
+    func test_classifyPath_local() {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let path = "\(home)/.qr2fa/accounts.json"
+        XCTAssertEqual(StorageService.classifyPath(path), .local)
+    }
 }
