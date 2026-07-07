@@ -16,6 +16,11 @@ struct qr2faApp: App {
     }
 }
 
+private enum SettingsTab: Hashable {
+    case accounts
+    case general
+}
+
 private struct SettingsScene: View {
     static let windowID = "settings"
 
@@ -23,19 +28,36 @@ private struct SettingsScene: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
     @State private var didBootstrap = false
+    @State private var selectedTab: SettingsTab = .accounts
 
     var body: some View {
-        SettingsView()
-            .environment(appDelegate.storageService)
-            .frame(minWidth: 760, idealWidth: 960, minHeight: 440, idealHeight: 580)
-            .onAppear {
-                // openWindow 액션을 AppDelegate에 넘겨 메뉴바에서 창을 열 수 있게 한다.
-                appDelegate.presentSettings = { openWindow(id: Self.windowID) }
-                // Window 씬은 실행 시 자동으로 열리므로, 첫 등장 때는 숨겨 메뉴바 앱처럼 동작한다.
-                if !didBootstrap {
-                    didBootstrap = true
-                    dismissWindow(id: Self.windowID)
-                }
+        Group {
+            if selectedTab == .accounts {
+                SettingsView()
+            } else {
+                GeneralSettingsView()
             }
+        }
+        .environment(appDelegate.storageService)
+        .frame(minWidth: 760, idealWidth: 960, minHeight: 440, idealHeight: 580)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Picker("", selection: $selectedTab) {
+                    Text("계정").tag(SettingsTab.accounts)
+                    Text("일반").tag(SettingsTab.general)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 160)
+            }
+        }
+        .onAppear {
+            // openWindow 액션을 AppDelegate에 넘겨 메뉴바에서 창을 열 수 있게 한다.
+            appDelegate.presentSettings = { openWindow(id: Self.windowID) }
+            // Window 씬은 실행 시 자동으로 열리므로, 첫 등장 때는 숨겨 메뉴바 앱처럼 동작한다.
+            if !didBootstrap {
+                didBootstrap = true
+                dismissWindow(id: Self.windowID)
+            }
+        }
     }
 }
