@@ -49,7 +49,7 @@ clean:
 # /Applications/qr2fa.app만 남기고 나머지 등록을 지운다 (파일은 안 지움 — 다시 빌드하면 재등록됨).
 tidy:
 	@"$(LSREGISTER)" -dump 2>/dev/null \
-		| awk '/^bundle id:.*qr2fa/{f=1} f && /^path:/{print $$2; f=0}' \
+		| awk '/^bundle id:.*qr2fa/{f=1} f && /^path:/{sub(/^path:[ \t]*/,""); sub(/ \(0x[0-9a-fA-F]+\)$$/,""); print; f=0}' \
 		| grep -vFx "$(INSTALL_DIR)/$(APP_NAME).app" \
 		| while read -r p; do \
 			echo "  등록 해제: $$p"; \

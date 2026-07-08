@@ -114,6 +114,15 @@ struct SettingsView: View {
             selectedAccountID = nil
             isEditingAccount = false
         }
+        .onChange(of: selectedIssuer) {
+            // sidebarView 안이 아니라 여기(Group)에 붙인다 — sidebarView는 일반⇄계정 전환마다
+            // 다시 마운트되는 인스턴스라, 전환을 유발한 바로 그 선택 변경에 대해서는 onChange가
+            // 발동하지 않을 수 있다. Group은 정체성이 유지되므로 모든 전환에서 안정적으로 발동한다.
+            guard !isGeneralSelected else { return }
+            // 서비스 그룹을 바꾸면 편집 상태를 끄고 그 그룹의 첫 번째 계정을 선택한다.
+            isEditingAccount = false
+            selectedAccountID = listedAccounts.first?.id
+        }
     }
 
     private var sidebarView: some View {
@@ -134,12 +143,6 @@ struct SettingsView: View {
                     }
                 }
             }
-        }
-        .onChange(of: selectedIssuer) {
-            guard !isGeneralSelected else { return }
-            // 서비스 그룹을 바꾸면 편집 상태를 끄고 그 그룹의 첫 번째 계정을 선택한다.
-            isEditingAccount = false
-            selectedAccountID = listedAccounts.first?.id
         }
         .navigationSplitViewColumnWidth(min: 160, ideal: 180)
     }
