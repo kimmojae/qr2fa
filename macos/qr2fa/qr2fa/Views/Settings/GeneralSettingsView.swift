@@ -5,115 +5,48 @@ struct GeneralSettingsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                sectionLabel("저장 위치")
-                storageCard
-                priorityList
+            VStack(alignment: .leading, spacing: 16) {
+                pathGroup
+                actionsGroup
+                Text("직접 고른 위치가 있으면 항상 우선하고, 없으면 iCloud Drive를 자동으로 사용합니다. iCloud Drive가 없는 Mac에서는 홈 폴더(~/.qr2fa)에 저장합니다.")
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.secondary)
             }
-            .padding(20)
-            .frame(maxWidth: 560, alignment: .leading)
+            .padding(24)
+            .frame(maxWidth: 480, alignment: .leading)
         }
         .frame(maxWidth: .infinity)
     }
 
-    private var storageCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: statusIcon)
-                    .font(.system(size: 15))
-                    .foregroundStyle(Color.settingsAccent)
-                    .frame(width: 30, height: 30)
-                    .background(Color.settingsAccent.opacity(0.14))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 5) {
-                        Circle()
-                            .fill(Color.settingsAccent)
-                            .frame(width: 6, height: 6)
-                        Text(statusText)
-                            .font(.system(size: 11.5, weight: .semibold))
-                            .foregroundStyle(Color.settingsAccent)
-                    }
-                    Text(storageService.storagePath)
-                        .font(.system(size: 12, weight: .medium, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .truncationMode(.middle)
-                }
-            }
-
-            HStack(spacing: 8) {
-                Button("변경…") { changeLocation() }
-                    .buttonStyle(.borderedProminent)
-                Button("Finder에서 보기") { revealInFinder() }
-                    .buttonStyle(.bordered)
-                Button("기본값으로 복원") { resetToDefault() }
-                    .buttonStyle(.bordered)
-                    .disabled(storageService.isDefaultPath)
-            }
-            .padding(.top, 12)
+    private var pathGroup: some View {
+        HStack(alignment: .top) {
+            Text("저장 위치")
+                .font(.system(size: 12.5))
+            Spacer(minLength: 12)
+            Text(storageService.storagePath)
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.trailing)
+                .lineLimit(2)
+                .truncationMode(.middle)
+                .textSelection(.enabled)
         }
-        .padding(14)
-        .background(Color.settingsCard)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(12)
+        .background(Color.settingsGroup)
+        .clipShape(RoundedRectangle(cornerRadius: 9))
     }
 
-    private var priorityList: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            priorityRow(
-                1, title: "사용자 지정 위치",
-                detail: "\"변경…\"으로 직접 고른 폴더가 있으면 항상 우선합니다.",
-                isCurrent: storageService.locationKind == .custom
-            )
-            priorityRow(
-                2, title: "iCloud Drive",
-                detail: "iCloud Drive를 쓰는 Mac이면 자동으로 여기에 저장해 다른 기기와 동기화합니다.",
-                isCurrent: storageService.locationKind == .iCloud
-            )
-            priorityRow(
-                3, title: "로컬 폴더 (~/.qr2fa)",
-                detail: "iCloud Drive가 없는 Mac에서는 홈 폴더 아래에 저장합니다.",
-                isCurrent: storageService.locationKind == .local
-            )
+    private var actionsGroup: some View {
+        HStack(spacing: 8) {
+            Button("변경…") { changeLocation() }
+            Button("Finder에서 보기") { revealInFinder() }
+            Button("기본값으로 복원") { resetToDefault() }
+                .disabled(storageService.isDefaultPath)
         }
-        .padding(.top, 6)
-    }
-
-    private func priorityRow(_ number: Int, title: String, detail: String, isCurrent: Bool) -> some View {
-        HStack(alignment: .top, spacing: 11) {
-            Text("\(number)")
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                .foregroundStyle(isCurrent ? .white : .secondary)
-                .frame(width: 20, height: 20)
-                .background(isCurrent ? Color.settingsAccent : Color.settingsCard)
-                .clipShape(Circle())
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title)
-                    .font(.system(size: 12.5, weight: .semibold))
-                    .foregroundStyle(isCurrent ? Color.settingsAccent : .primary)
-                Text(detail)
-                    .font(.system(size: 11.5))
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private var statusIcon: String {
-        switch storageService.locationKind {
-        case .custom: return "folder"
-        case .iCloud: return "icloud"
-        case .local: return "internaldrive"
-        }
-    }
-
-    private var statusText: String {
-        switch storageService.locationKind {
-        case .custom: return "사용자 지정 위치에 저장 중"
-        case .iCloud: return "iCloud Drive에 저장 중"
-        case .local: return "로컬 폴더에 저장 중"
-        }
+        .buttonStyle(.bordered)
+        .padding(12)
+        .background(Color.settingsGroup)
+        .clipShape(RoundedRectangle(cornerRadius: 9))
     }
 
     // MARK: - Actions
@@ -152,17 +85,8 @@ struct GeneralSettingsView: View {
         alert.alertStyle = .warning
         alert.runModal()
     }
-
-    private func sectionLabel(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 10, weight: .medium))
-            .foregroundStyle(.secondary)
-            .textCase(.uppercase)
-            .kerning(0.5)
-    }
 }
 
 private extension Color {
-    static let settingsCard = Color(nsColor: NSColor(red: 0.17, green: 0.17, blue: 0.18, alpha: 1))
-    static let settingsAccent = Color(nsColor: .systemGreen)
+    static let settingsGroup = Color(nsColor: NSColor(red: 0.17, green: 0.17, blue: 0.18, alpha: 1))
 }

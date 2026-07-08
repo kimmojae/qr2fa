@@ -24,10 +24,6 @@ final class StorageService {
         storagePath == StorageService.resolveDefaultPath()
     }
 
-    var locationKind: StorageLocationKind {
-        isDefaultPath ? StorageService.classifyPath(storagePath) : .custom
-    }
-
     func resetToDefaultPath() throws {
         let configPath = "\(FileManager.default.homeDirectoryForCurrentUser.path)/.config/qr2fa/config.json"
         try? FileManager.default.removeItem(atPath: configPath)
@@ -146,12 +142,6 @@ final class StorageService {
         return "\(home)/.qr2fa/accounts.json"
     }
 
-    static func classifyPath(_ path: String) -> StorageLocationKind {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let iCloudPrefix = "\(home)/Library/Mobile Documents/com~apple~CloudDocs"
-        return path.hasPrefix(iCloudPrefix) ? .iCloud : .local
-    }
-
     // MARK: - Private helpers
 
     private struct CLIConfig: Codable {
@@ -174,10 +164,4 @@ final class StorageService {
 enum StorageError: LocalizedError {
     case accountNotFound
     var errorDescription: String? { "Account not found" }
-}
-
-enum StorageLocationKind: Equatable {
-    case custom
-    case iCloud
-    case local
 }

@@ -102,52 +102,35 @@ struct SettingsView: View {
     }
 
     private var sidebarView: some View {
-        VStack(spacing: 0) {
-            List(selection: $selectedIssuer) {
-                Text("모든 계정")
-                    .tag("__all__")
+        List(selection: $selectedIssuer) {
+            Section {
+                Text("일반")
+                    .tag("__general__")
+            }
 
-                if !issuers.isEmpty {
-                    Section("서비스") {
-                        ForEach(issuers, id: \.self) { issuer in
-                            Text(issuer)
-                                .tag(issuer)
-                        }
+            Text("모든 계정")
+                .tag("__all__")
+
+            if !issuers.isEmpty {
+                Section("서비스") {
+                    ForEach(issuers, id: \.self) { issuer in
+                        Text(issuer)
+                            .tag(issuer)
                     }
                 }
             }
-            .onAppear {
-                // 모드 전환으로 사이드바가 다시 마운트될 때 "__general__" 선택을 덮어쓰지 않도록 가드.
-                if selectedIssuer == nil {
-                    selectedIssuer = "__all__"
-                }
+        }
+        .onAppear {
+            // 모드 전환으로 사이드바가 다시 마운트될 때 "__general__" 선택을 덮어쓰지 않도록 가드.
+            if selectedIssuer == nil {
+                selectedIssuer = "__all__"
             }
-            .onChange(of: selectedIssuer) {
-                guard !isGeneralSelected else { return }
-                // 서비스 그룹을 바꾸면 편집 상태를 끄고 그 그룹의 첫 번째 계정을 선택한다.
-                isEditingAccount = false
-                selectedAccountID = listedAccounts.first?.id
-            }
-
-            Divider()
-
-            Button {
-                selectedIssuer = "__general__"
-            } label: {
-                HStack(spacing: 7) {
-                    Image(systemName: "gearshape")
-                        .frame(width: 16)
-                    Text("일반")
-                    Spacer()
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .background(isGeneralSelected ? Color.accentColor.opacity(0.18) : Color.clear)
-            .clipShape(RoundedRectangle(cornerRadius: 5))
-            .padding(6)
+        }
+        .onChange(of: selectedIssuer) {
+            guard !isGeneralSelected else { return }
+            // 서비스 그룹을 바꾸면 편집 상태를 끄고 그 그룹의 첫 번째 계정을 선택한다.
+            isEditingAccount = false
+            selectedAccountID = listedAccounts.first?.id
         }
         .navigationSplitViewColumnWidth(min: 160, ideal: 180)
     }
