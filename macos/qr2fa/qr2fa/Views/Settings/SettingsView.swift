@@ -31,6 +31,8 @@ struct SettingsView: View {
     }
 
     var body: some View {
+        // Group으로 감싸서 .onAppear/.onDisappear를 여기 붙인다 — Group 자체는 내부 if/else가
+        // 바뀌어도 정체성이 유지되므로, 일반⇄계정 토글마다가 아니라 창이 실제로 열리고 닫힐 때만 실행된다.
         Group {
             if isGeneralSelected {
                 NavigationSplitView {

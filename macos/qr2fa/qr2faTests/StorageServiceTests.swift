@@ -121,5 +121,4 @@ final class StorageServiceTests: XCTestCase {
         )
         XCTAssertThrowsError(try service.update(nonexistent))
     }
-
 }
