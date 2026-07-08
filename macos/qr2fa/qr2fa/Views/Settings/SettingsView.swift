@@ -26,8 +26,83 @@ struct SettingsView: View {
         return storageService.accounts.first { $0.id == id }
     }
 
+    private var isGeneralSelected: Bool {
+        selectedIssuer == "__general__"
+    }
+
     var body: some View {
-        NavigationSplitView {
+        if isGeneralSelected {
+            NavigationSplitView {
+                sidebarView
+            } detail: {
+                GeneralSettingsView()
+                    .environment(storageService)
+            }
+        } else {
+            NavigationSplitView {
+                sidebarView
+            } content: {
+                List(selection: $selectedAccountID) {
+                    ForEach(listedAccounts) { account in
+                        AccountRowView(account: account)
+                            .tag(account.id)
+                    }
+                }
+                .listStyle(.inset)
+                .navigationSplitViewColumnWidth(min: 200, ideal: 240)
+                .onChange(of: selectedAccountID) {
+                    isEditingAccount = false
+                }
+            } detail: {
+                if let account = selectedAccount {
+                    AccountDetailView(account: account, isEditing: $isEditingAccount) {
+                        selectedAccountID = nil
+                        isEditingAccount = false
+                    }
+                    .environment(storageService)
+                } else {
+                    ContentUnavailableView(
+                        "계정을 선택하세요",
+                        systemImage: "qrcode",
+                        description: Text("왼쪽 목록에서 계정을 선택하면 QR 코드와 인증 코드를 볼 수 있습니다.")
+                    )
+                }
+            }
+            .toolbar {
+                ToolbarItemGroup(placement: .primaryAction) {
+                    if isEditingAccount {
+                        Button("편집 취소") {
+                            isEditingAccount = false
+                        }
+                        .buttonStyle(.bordered)
+                    } else {
+                        Button {
+                            isEditingAccount = true
+                        } label: {
+                            Text("편집")
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(selectedAccount == nil)
+                        .help("계정 편집")
+
+                        Button {
+                            showingAddSheet = true
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                        .buttonStyle(.bordered)
+                        .help("계정 추가")
+                    }
+                }
+            }
+            .sheet(isPresented: $showingAddSheet) {
+                AccountAddSheet().environment(storageService)
+            }
+        }
+    }
+
+    private var sidebarView: some View {
+        VStack(spacing: 0) {
             List(selection: $selectedIssuer) {
                 Text("모든 계정")
                     .tag("__all__")
@@ -41,70 +116,40 @@ struct SettingsView: View {
                     }
                 }
             }
-            .navigationSplitViewColumnWidth(min: 160, ideal: 180)
-            .onAppear { selectedIssuer = "__all__" }
+            .onAppear {
+                // 모드 전환으로 사이드바가 다시 마운트될 때 "__general__" 선택을 덮어쓰지 않도록 가드.
+                if selectedIssuer == nil {
+                    selectedIssuer = "__all__"
+                }
+            }
             .onChange(of: selectedIssuer) {
+                guard !isGeneralSelected else { return }
                 // 서비스 그룹을 바꾸면 편집 상태를 끄고 그 그룹의 첫 번째 계정을 선택한다.
                 isEditingAccount = false
                 selectedAccountID = listedAccounts.first?.id
             }
-        } content: {
-            List(selection: $selectedAccountID) {
-                ForEach(listedAccounts) { account in
-                    AccountRowView(account: account)
-                        .tag(account.id)
-                }
-            }
-            .listStyle(.inset)
-            .navigationSplitViewColumnWidth(min: 200, ideal: 240)
-            .onChange(of: selectedAccountID) {
-                isEditingAccount = false
-            }
-        } detail: {
-            if let account = selectedAccount {
-                AccountDetailView(account: account, isEditing: $isEditingAccount) {
-                    selectedAccountID = nil
-                    isEditingAccount = false
-                }
-                .environment(storageService)
-            } else {
-                ContentUnavailableView(
-                    "계정을 선택하세요",
-                    systemImage: "qrcode",
-                    description: Text("왼쪽 목록에서 계정을 선택하면 QR 코드와 인증 코드를 볼 수 있습니다.")
-                )
-            }
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                if isEditingAccount {
-                    Button("편집 취소") {
-                        isEditingAccount = false
-                    }
-                    .buttonStyle(.bordered)
-                } else {
-                    Button {
-                        isEditingAccount = true
-                    } label: {
-                        Text("편집")
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(selectedAccount == nil)
-                    .help("계정 편집")
 
-                    Button {
-                        showingAddSheet = true
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .buttonStyle(.bordered)
-                    .help("계정 추가")
+            Divider()
+
+            Button {
+                selectedIssuer = "__general__"
+            } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: "gearshape")
+                        .frame(width: 16)
+                    Text("일반")
+                    Spacer()
                 }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .background(isGeneralSelected ? Color.accentColor.opacity(0.18) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 5))
+            .padding(6)
         }
-        .sheet(isPresented: $showingAddSheet) {
-            AccountAddSheet().environment(storageService)
-        }
+        .navigationSplitViewColumnWidth(min: 160, ideal: 180)
     }
 }
 
