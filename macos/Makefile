@@ -6,8 +6,9 @@ RELEASE_APP = $(BUILD_DIR)/DerivedData/Build/Products/Release/$(APP_NAME).app
 INSTALL_DIR = /Applications
 # 자기서명 코드서명 신원. 이 인증서로 고정 서명해야 화면 기록(TCC) 권한이 빌드 간 유지됨.
 SIGN_ID     = qr2fa-selfsign
+LSREGISTER  = /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister
 
-.PHONY: build install archive zip clean
+.PHONY: build install archive zip clean tidy
 
 build:
 	xcodebuild build \
@@ -42,3 +43,16 @@ zip: archive
 
 clean:
 	rm -rf $(BUILD_DIR)
+
+# xcodebuild가 build/test를 돌릴 때마다 DerivedData 산출물을 Launch Services에 등록해서
+# Spotlight에 "qr2fa"가 여러 개(옛 경로에 남은 죽은 항목 포함) 뜨게 만든다.
+# /Applications/qr2fa.app만 남기고 나머지 등록을 지운다 (파일은 안 지움 — 다시 빌드하면 재등록됨).
+tidy:
+	@"$(LSREGISTER)" -dump 2>/dev/null \
+		| awk '/^bundle id:.*qr2fa/{f=1} f && /^path:/{print $$2; f=0}' \
+		| grep -vFx "$(INSTALL_DIR)/$(APP_NAME).app" \
+		| while read -r p; do \
+			echo "  등록 해제: $$p"; \
+			"$(LSREGISTER)" -u "$$p" 2>/dev/null; \
+		done
+	@echo "✅ Spotlight/Launch Services 정리 완료 (재빌드하면 다시 등록됨 — 신경쓰이면 make tidy 다시 실행)"
