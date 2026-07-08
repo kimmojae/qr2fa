@@ -2,7 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(StorageService.self) private var storageService
-    @State private var selectedIssuer: String? = nil
+    @State private var selectedIssuer: String? = "__all__"
     @State private var selectedAccountID: Int? = nil
     @State private var showingAddSheet = false
     @State private var isEditingAccount: Bool = false
@@ -31,73 +31,86 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        if isGeneralSelected {
-            NavigationSplitView {
-                sidebarView
-            } detail: {
-                GeneralSettingsView()
-                    .environment(storageService)
-            }
-        } else {
-            NavigationSplitView {
-                sidebarView
-            } content: {
-                List(selection: $selectedAccountID) {
-                    ForEach(listedAccounts) { account in
-                        AccountRowView(account: account)
-                            .tag(account.id)
+        Group {
+            if isGeneralSelected {
+                NavigationSplitView {
+                    sidebarView
+                } detail: {
+                    GeneralSettingsView()
+                        .environment(storageService)
+                }
+            } else {
+                NavigationSplitView {
+                    sidebarView
+                } content: {
+                    List(selection: $selectedAccountID) {
+                        ForEach(listedAccounts) { account in
+                            AccountRowView(account: account)
+                                .tag(account.id)
+                        }
                     }
-                }
-                .listStyle(.inset)
-                .navigationSplitViewColumnWidth(min: 200, ideal: 240)
-                .onChange(of: selectedAccountID) {
-                    isEditingAccount = false
-                }
-            } detail: {
-                if let account = selectedAccount {
-                    AccountDetailView(account: account, isEditing: $isEditingAccount) {
-                        selectedAccountID = nil
+                    .listStyle(.inset)
+                    .navigationSplitViewColumnWidth(min: 200, ideal: 240)
+                    .onChange(of: selectedAccountID) {
                         isEditingAccount = false
                     }
-                    .environment(storageService)
-                } else {
-                    ContentUnavailableView(
-                        "계정을 선택하세요",
-                        systemImage: "qrcode",
-                        description: Text("왼쪽 목록에서 계정을 선택하면 QR 코드와 인증 코드를 볼 수 있습니다.")
-                    )
-                }
-            }
-            .toolbar {
-                ToolbarItemGroup(placement: .primaryAction) {
-                    if isEditingAccount {
-                        Button("편집 취소") {
+                } detail: {
+                    if let account = selectedAccount {
+                        AccountDetailView(account: account, isEditing: $isEditingAccount) {
+                            selectedAccountID = nil
                             isEditingAccount = false
                         }
-                        .buttonStyle(.bordered)
+                        .environment(storageService)
                     } else {
-                        Button {
-                            isEditingAccount = true
-                        } label: {
-                            Text("편집")
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(selectedAccount == nil)
-                        .help("계정 편집")
-
-                        Button {
-                            showingAddSheet = true
-                        } label: {
-                            Image(systemName: "plus")
-                        }
-                        .buttonStyle(.bordered)
-                        .help("계정 추가")
+                        ContentUnavailableView(
+                            "계정을 선택하세요",
+                            systemImage: "qrcode",
+                            description: Text("왼쪽 목록에서 계정을 선택하면 QR 코드와 인증 코드를 볼 수 있습니다.")
+                        )
                     }
                 }
+                .toolbar {
+                    ToolbarItemGroup(placement: .primaryAction) {
+                        if isEditingAccount {
+                            Button("편집 취소") {
+                                isEditingAccount = false
+                            }
+                            .buttonStyle(.bordered)
+                        } else {
+                            Button {
+                                isEditingAccount = true
+                            } label: {
+                                Text("편집")
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(selectedAccount == nil)
+                            .help("계정 편집")
+
+                            Button {
+                                showingAddSheet = true
+                            } label: {
+                                Image(systemName: "plus")
+                            }
+                            .buttonStyle(.bordered)
+                            .help("계정 추가")
+                        }
+                    }
+                }
+                .sheet(isPresented: $showingAddSheet) {
+                    AccountAddSheet().environment(storageService)
+                }
             }
-            .sheet(isPresented: $showingAddSheet) {
-                AccountAddSheet().environment(storageService)
+        }
+        .onAppear {
+            if selectedAccountID == nil {
+                selectedAccountID = listedAccounts.first?.id
             }
+        }
+        .onDisappear {
+            // 창을 닫을 때 상태를 초기화해서, 다음에 열 때는 항상 "모든 계정"에서 시작하게 한다.
+            selectedIssuer = "__all__"
+            selectedAccountID = nil
+            isEditingAccount = false
         }
     }
 
@@ -118,12 +131,6 @@ struct SettingsView: View {
                             .tag(issuer)
                     }
                 }
-            }
-        }
-        .onAppear {
-            // 모드 전환으로 사이드바가 다시 마운트될 때 "__general__" 선택을 덮어쓰지 않도록 가드.
-            if selectedIssuer == nil {
-                selectedIssuer = "__all__"
             }
         }
         .onChange(of: selectedIssuer) {
