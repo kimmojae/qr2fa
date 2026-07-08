@@ -71,6 +71,7 @@ struct AccountDetailView: View {
             draftName = account.name
             draftTag = account.tag
             qrImage = generateQRImage()
+            refreshTOTP()
         }
         .onChange(of: isEditing) { _, editing in
             if editing {
