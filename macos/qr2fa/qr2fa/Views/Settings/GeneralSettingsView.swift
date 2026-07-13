@@ -1,55 +1,70 @@
+import ServiceManagement
 import SwiftUI
 
 struct GeneralSettingsView: View {
     @Environment(StorageService.self) private var storageService
+    @State private var startAtLogin = SMAppService.mainApp.status == .enabled
+    @State private var showingLocationInfo = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                pathGroup
-                actionsGroup
-                Text("직접 고른 위치가 있으면 항상 우선하고, 없으면 iCloud Drive를 자동으로 사용합니다. iCloud Drive가 없는 Mac에서는 홈 폴더(~/.qr2fa)에 저장합니다.")
-                    .font(.system(size: 11.5))
-                    .foregroundStyle(.secondary)
+        Form {
+            Section {
+                Toggle("로그인 시 시작", isOn: $startAtLogin)
+                    .onChange(of: startAtLogin) { _, newValue in
+                        setStartAtLogin(newValue)
+                    }
             }
-            .padding(24)
-            .frame(maxWidth: 480, alignment: .leading)
-        }
-        .frame(maxWidth: .infinity)
-    }
 
-    private var pathGroup: some View {
-        HStack(alignment: .top) {
-            Text("저장 위치")
-                .font(.system(size: 12.5))
-            Spacer(minLength: 12)
-            Text(storageService.storagePath)
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.trailing)
-                .lineLimit(2)
-                .truncationMode(.middle)
-                .textSelection(.enabled)
+            Section {
+                LabeledContent {
+                    Text(storageService.storagePath)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.trailing)
+                        .lineLimit(2)
+                        .truncationMode(.middle)
+                        .textSelection(.enabled)
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("저장 위치")
+                        Button {
+                            showingLocationInfo = true
+                        } label: {
+                            Image(systemName: "info.circle")
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .popover(isPresented: $showingLocationInfo) {
+                            Text("직접 고른 위치가 있으면 그 위치를 항상 우선 사용합니다. 고른 적이 없으면 iCloud Drive에 자동으로 저장하고, iCloud Drive를 쓸 수 없는 Mac에서는 홈 폴더(~/.qr2fa)에 저장합니다.")
+                                .frame(width: 260)
+                                .padding()
+                        }
+                    }
+                }
+                HStack(spacing: 8) {
+                    Button("변경…") { changeLocation() }
+                    Button("Finder에서 보기") { revealInFinder() }
+                    Button("기본값으로 복원") { resetToDefault() }
+                        .disabled(storageService.isDefaultPath)
+                }
+            }
         }
-        .padding(12)
-        .background(Color.settingsGroup)
-        .clipShape(RoundedRectangle(cornerRadius: 9))
-    }
-
-    private var actionsGroup: some View {
-        HStack(spacing: 8) {
-            Button("변경…") { changeLocation() }
-            Button("Finder에서 보기") { revealInFinder() }
-            Button("기본값으로 복원") { resetToDefault() }
-                .disabled(storageService.isDefaultPath)
-        }
-        .buttonStyle(.bordered)
-        .padding(12)
-        .background(Color.settingsGroup)
-        .clipShape(RoundedRectangle(cornerRadius: 9))
+        .formStyle(.grouped)
     }
 
     // MARK: - Actions
+
+    private func setStartAtLogin(_ enabled: Bool) {
+        do {
+            if enabled {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
+        } catch {
+            startAtLogin = !enabled
+            showError(error, title: "로그인 항목 설정을 변경할 수 없습니다")
+        }
+    }
 
     private func changeLocation() {
         let panel = NSOpenPanel()
@@ -78,15 +93,11 @@ struct GeneralSettingsView: View {
         }
     }
 
-    private func showError(_ error: Error) {
+    private func showError(_ error: Error, title: String = "저장 위치를 변경할 수 없습니다") {
         let alert = NSAlert()
-        alert.messageText = "저장 위치를 변경할 수 없습니다"
+        alert.messageText = title
         alert.informativeText = error.localizedDescription
         alert.alertStyle = .warning
         alert.runModal()
     }
-}
-
-private extension Color {
-    static let settingsGroup = Color(nsColor: NSColor(red: 0.17, green: 0.17, blue: 0.18, alpha: 1))
 }
