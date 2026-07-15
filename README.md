@@ -1,6 +1,10 @@
-# QR2FA
+<div align="center">
+  <img src="images/icon.png" width="128" height="128" alt="QR2FA logo">
 
-터미널에서 사용하는 TOTP MFA 인증 관리 도구. QR 캡처와 Google Authenticator 마이그레이션 지원.
+  # QR2FA
+
+  터미널에서 사용하는 TOTP MFA 인증 관리 도구. QR 캡처와 Google Authenticator 마이그레이션 지원.
+</div>
 
 ## Repository Structure
 
