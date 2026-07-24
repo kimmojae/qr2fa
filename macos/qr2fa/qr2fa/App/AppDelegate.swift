@@ -35,7 +35,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "dot.viewfinder", accessibilityDescription: "qr2fa")
+        let icon = NSImage(named: "MenuBarIcon")
+        icon?.isTemplate = true
+        icon?.size = NSSize(width: 18, height: 18)
+        statusItem.button?.image = icon
         rebuildMenu()
     }
 
