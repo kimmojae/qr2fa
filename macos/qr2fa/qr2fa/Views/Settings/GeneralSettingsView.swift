@@ -47,8 +47,43 @@ struct GeneralSettingsView: View {
                         .disabled(storageService.isDefaultPath)
                 }
             }
+
+            Section {
+                HStack(spacing: 16) {
+                    Image(nsImage: NSApp.applicationIconImage)
+                        .resizable()
+                        .frame(width: 72, height: 72)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(appName)
+                            .font(.system(size: 30, weight: .semibold))
+                        Text("Version \(appVersion)")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                        Text("Copyright © 2026 kimmojae")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                        Link("GitHub", destination: URL(string: "https://github.com/kimmojae/qr2fa")!)
+                            .font(.system(size: 12))
+                            .padding(.top, 2)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.vertical, 6)
+            }
         }
         .formStyle(.grouped)
+    }
+
+    // MARK: - App info
+
+    private var appName: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+            ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
+            ?? "Qr2fa"
+    }
+
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
     }
 
     // MARK: - Actions

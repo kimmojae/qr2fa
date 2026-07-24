@@ -30,6 +30,14 @@ struct SettingsView: View {
         selectedIssuer == "__general__"
     }
 
+    // 사이드바에서 선택한 항목의 이름 — 둘째 열(계정 목록) 상단 제목으로 쓴다.
+    private var contentTitle: String {
+        guard let issuer = selectedIssuer, issuer != "__all__" else {
+            return "모든 계정"
+        }
+        return issuer
+    }
+
     var body: some View {
         // Group으로 감싸서 .onAppear/.onDisappear를 여기 붙인다 — Group 자체는 내부 if/else가
         // 바뀌어도 정체성이 유지되므로, 일반⇄계정 토글마다가 아니라 창이 실제로 열리고 닫힐 때만 실행된다.
@@ -41,6 +49,7 @@ struct SettingsView: View {
                     GeneralSettingsView()
                         .environment(storageService)
                 }
+                .navigationTitle("")
             } else {
                 NavigationSplitView {
                     sidebarView
@@ -52,6 +61,7 @@ struct SettingsView: View {
                         }
                     }
                     .listStyle(.inset)
+                    .navigationTitle(contentTitle)
                     .navigationSplitViewColumnWidth(min: 200, ideal: 240)
                     .onChange(of: selectedAccountID) {
                         isEditingAccount = false
@@ -71,6 +81,7 @@ struct SettingsView: View {
                         )
                     }
                 }
+                .navigationTitle("")
                 .toolbar {
                     ToolbarItemGroup(placement: .primaryAction) {
                         if isEditingAccount {
@@ -125,6 +136,19 @@ struct SettingsView: View {
         }
     }
 
+    private var logoTitle: some View {
+        // 배경 없는 단색 픽셀-Q(메뉴바 아이콘과 동일한 template 에셋).
+        // template 렌더링이라 라이트/다크 모드의 라벨 색을 자동으로 따라간다.
+        // 툴바가 아니라 사이드바 콘텐츠에 두므로 버튼 유리 배경이 붙지 않는다.
+        Image("MenuBarIcon")
+            .renderingMode(.template)
+            .resizable()
+            .interpolation(.none)
+            .frame(width: 18, height: 18)
+            .foregroundStyle(.primary)
+            .accessibilityLabel("Qr2fa")
+    }
+
     private var sidebarView: some View {
         List(selection: $selectedIssuer) {
             Section {
@@ -132,19 +156,26 @@ struct SettingsView: View {
                     .tag("__general__")
             }
 
-            Text("모든 계정")
-                .tag("__all__")
+            Section("계정") {
+                Text("모든 계정")
+                    .tag("__all__")
 
-            if !issuers.isEmpty {
-                Section("서비스") {
-                    ForEach(issuers, id: \.self) { issuer in
-                        Text(issuer)
-                            .tag(issuer)
-                    }
+                ForEach(issuers, id: \.self) { issuer in
+                    Text(issuer)
+                        .tag(issuer)
                 }
             }
         }
         .navigationSplitViewColumnWidth(min: 160, ideal: 180)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            HStack {
+                logoTitle
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 8)
+            .padding(.bottom, 12)
+        }
     }
 }
 

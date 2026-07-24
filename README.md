@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="images/icon.png" width="128" height="128" alt="QR2FA logo">
+  <img src="images/icon.png" width="128" height="128" alt="Qr2fa logo">
 
-  # QR2FA
+  # Qr2fa
 
   터미널에서 사용하는 TOTP MFA 인증 관리 도구. QR 캡처와 Google Authenticator 마이그레이션 지원.
 </div>
@@ -13,7 +13,7 @@
 
 ## macOS 메뉴바 앱
 
-QR2FA macOS 메뉴바 앱은 동일한 `accounts.json`을 공유하는 네이티브 macOS 앱입니다.
+Qr2fa macOS 메뉴바 앱은 동일한 `accounts.json`을 공유하는 네이티브 macOS 앱입니다.
 
 ### 설치
 
