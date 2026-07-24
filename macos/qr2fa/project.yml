@@ -15,9 +15,14 @@ targets:
       - path: qr2fa
         excludes:
           - "**/*.md"
+          - "AppIcon.icon"
+      - path: qr2fa/AppIcon.icon
+        type: file
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.kimmojae.qr2fa
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         SWIFT_VERSION: "5.9"
         CODE_SIGN_IDENTITY: ""
