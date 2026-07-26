@@ -54,7 +54,12 @@ struct SettingsView: View {
                 NavigationSplitView {
                     sidebarView
                 } content: {
-                    List(selection: $selectedAccountID) {
+                    // 빈 공간 클릭 등으로 들어오는 nil(선택 해제)은 무시한다.
+                    // 원본 State가 안 바뀌므로 해제→복원 왕복이 없고, 탭 깜빡임도 안 생긴다.
+                    List(selection: Binding(
+                        get: { selectedAccountID },
+                        set: { if let newValue = $0 { selectedAccountID = newValue } }
+                    )) {
                         ForEach(listedAccounts) { account in
                             AccountRowView(account: account)
                                 .tag(account.id)
@@ -63,8 +68,18 @@ struct SettingsView: View {
                     .listStyle(.inset)
                     .navigationTitle(contentTitle)
                     .navigationSplitViewColumnWidth(min: 200, ideal: 240)
-                    .onChange(of: selectedAccountID) {
+                    .onChange(of: selectedAccountID) { oldValue, _ in
                         isEditingAccount = false
+                        // 항상 계정 하나는 선택된 상태를 유지한다. 빈 공간 클릭 등으로 선택이
+                        // 해제되면 직전 선택(아직 존재하면)이나 목록의 첫 계정으로 되돌린다.
+                        if selectedAccountID == nil {
+                            let restore = oldValue.flatMap { id in
+                                listedAccounts.contains { $0.id == id } ? id : nil
+                            } ?? listedAccounts.first?.id
+                            if restore != nil {
+                                selectedAccountID = restore
+                            }
+                        }
                     }
                 } detail: {
                     if let account = selectedAccount {
@@ -74,10 +89,11 @@ struct SettingsView: View {
                         }
                         .environment(storageService)
                     } else {
+                        // 여기까지 오는 건 계정이 하나도 없을 때뿐이다(항상 자동 선택되므로).
                         ContentUnavailableView(
-                            "계정을 선택하세요",
-                            systemImage: "qrcode",
-                            description: Text("왼쪽 목록에서 계정을 선택하면 QR 코드와 인증 코드를 볼 수 있습니다.")
+                            "계정이 없습니다",
+                            systemImage: "person.crop.circle.badge.plus",
+                            description: Text("오른쪽 위 + 버튼으로 계정을 추가하세요.")
                         )
                     }
                 }

@@ -17,7 +17,6 @@ struct AccountDetailView: View {
     @State private var qrImage: NSImage?
     @State private var showCopied = false
     @State private var showSecretCopied = false
-    @State private var isHoveringTOTP = false
     @State private var secretRevealed = false
     @State private var qrRevealed = false
 
@@ -25,20 +24,26 @@ struct AccountDetailView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ScrollView {
-                VStack(spacing: 12) {
-                    // 계정 정보 카드
-                    accountInfoCard
-
-                    // TOTP 카드
-                    totpCard
-
-                    // QR 카드
-                    qrCard
+            // 일반 설정 페이지와 동일한 grouped Form 블록 배경(라이트/다크 자동 대응)을 쓴다.
+            Form {
+                Section {
+                    infoServiceRow
+                    infoAccountRow
+                    if isEditing || !account.tag.isEmpty {
+                        infoTagRow
+                    }
+                    infoSecretRow
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 12)
+
+                Section {
+                    totpRow
+                }
+
+                Section {
+                    qrRow
+                }
             }
+            .formStyle(.grouped)
 
             if isEditing {
                 Divider()
@@ -81,17 +86,19 @@ struct AccountDetailView: View {
         }
     }
 
-    // MARK: - Subviews
+    // MARK: - Rows (grouped Form 안의 각 행)
 
-    private var accountInfoCard: some View {
+    private var infoServiceRow: some View {
         VStack(alignment: .leading, spacing: 5) {
             sectionLabel("서비스")
             Text(account.issuer.isEmpty ? account.name : account.issuer)
                 .font(.system(size: 15, weight: .semibold))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 
-            Divider()
-                .padding(.vertical, 1)
-
+    private var infoAccountRow: some View {
+        VStack(alignment: .leading, spacing: 5) {
             sectionLabel("계정")
             if isEditing {
                 TextField("계정명", text: $draftName)
@@ -102,29 +109,31 @@ struct AccountDetailView: View {
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(account.issuer.isEmpty ? .secondary : .primary)
             }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 
-            if isEditing || !account.tag.isEmpty {
-                Divider()
-                    .padding(.vertical, 1)
-
-                sectionLabel("태그")
-                if isEditing {
-                    HStack {
-                        TagBadgeView(tag: draftTag, showEditHint: true)
-                            .onTapGesture { showTagPopover = true }
-                            .popover(isPresented: $showTagPopover, arrowEdge: .bottom) {
-                                TagSelectorPopover(tag: $draftTag)
-                            }
-                        Spacer()
-                    }
-                } else {
-                    TagBadgeView(tag: account.tag)
+    private var infoTagRow: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            sectionLabel("태그")
+            if isEditing {
+                HStack {
+                    TagBadgeView(tag: draftTag, showEditHint: true)
+                        .onTapGesture { showTagPopover = true }
+                        .popover(isPresented: $showTagPopover, arrowEdge: .bottom) {
+                            TagSelectorPopover(tag: $draftTag)
+                        }
+                    Spacer()
                 }
+            } else {
+                TagBadgeView(tag: account.tag)
             }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 
-            Divider()
-                .padding(.vertical, 1)
-
+    private var infoSecretRow: some View {
+        VStack(alignment: .leading, spacing: 5) {
             sectionLabel("시크릿 키")
             HStack(spacing: 6) {
                 Text(secretRevealed ? account.secret : String(repeating: "•", count: min(account.secret.count, 24)))
@@ -156,13 +165,9 @@ struct AccountDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(Color.detailCard)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .padding(.top, 8)
     }
 
-    private var totpCard: some View {
+    private var totpRow: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 sectionLabel("인증 코드")
@@ -174,33 +179,27 @@ struct AccountDetailView: View {
 
             Spacer()
 
-            VStack(spacing: 2) {
-                ZStack {
-                    Circle()
-                        .stroke(Color.secondary.opacity(0.2), lineWidth: 2.5)
-                        .frame(width: 32, height: 32)
-                    Circle()
-                        .trim(from: 0, to: CGFloat(remaining) / CGFloat(account.period))
-                        .stroke(remaining <= 5 ? Color.orange : Color.green, lineWidth: 2.5)
-                        .frame(width: 32, height: 32)
-                        .rotationEffect(.degrees(-90))
-                    Text("\(remaining)")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(remaining <= 5 ? .orange : .primary)
-                }
-                Text("초")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.secondary)
+            ZStack {
+                Circle()
+                    .stroke(Color.secondary.opacity(0.2), lineWidth: 2.5)
+                    .frame(width: 34, height: 34)
+                Circle()
+                    .trim(from: 0, to: CGFloat(remaining) / CGFloat(account.period))
+                    .stroke(remaining <= 5 ? Color.orange : Color.green, lineWidth: 2.5)
+                    .frame(width: 34, height: 34)
+                    .rotationEffect(.degrees(-90))
+                Text("\(remaining)")
+                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(remaining <= 5 ? .orange : .primary)
             }
         }
-        .padding(10)
-        .background(isHoveringTOTP ? Color.detailCardHover : Color.detailCard)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .onHover { isHoveringTOTP = $0 }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
         .onTapGesture { copyCode() }
+        .help("탭하면 인증 코드 복사")
     }
 
-    private var qrCard: some View {
+    private var qrRow: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 sectionLabel("QR 코드")
@@ -235,9 +234,6 @@ struct AccountDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(Color.detailCard)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     // MARK: - Helpers
@@ -321,9 +317,4 @@ private func sectionLabel(_ text: String) -> some View {
         .foregroundStyle(.secondary)
         .textCase(.uppercase)
         .kerning(0.5)
-}
-
-private extension Color {
-    static let detailCard = Color(nsColor: NSColor(red: 0.17, green: 0.17, blue: 0.18, alpha: 1))
-    static let detailCardHover = Color(nsColor: NSColor(red: 0.22, green: 0.22, blue: 0.23, alpha: 1))
 }
