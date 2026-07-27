@@ -10,7 +10,6 @@ struct AccountDetailView: View {
     @Environment(StorageService.self) private var storageService
     @State private var draftName: String = ""
     @State private var draftTag: String = ""
-    @State private var showTagPopover = false
 
     @State private var totpCode: String = "------"
     @State private var remaining: Int = 30
@@ -103,6 +102,7 @@ struct AccountDetailView: View {
             if isEditing {
                 TextField("계정명", text: $draftName)
                     .textFieldStyle(.roundedBorder)
+                    .labelsHidden()
                     .font(.system(size: 14, weight: .medium))
             } else {
                 Text(account.name)
@@ -117,14 +117,10 @@ struct AccountDetailView: View {
         VStack(alignment: .leading, spacing: 5) {
             sectionLabel("태그")
             if isEditing {
-                HStack {
-                    TagBadgeView(tag: draftTag, showEditHint: true)
-                        .onTapGesture { showTagPopover = true }
-                        .popover(isPresented: $showTagPopover, arrowEdge: .bottom) {
-                            TagSelectorPopover(tag: $draftTag)
-                        }
-                    Spacer()
-                }
+                TextField("태그 (선택 사항)", text: $draftTag)
+                    .textFieldStyle(.roundedBorder)
+                    .labelsHidden()
+                    .font(.system(size: 14, weight: .medium))
             } else {
                 TagBadgeView(tag: account.tag)
             }
@@ -185,12 +181,12 @@ struct AccountDetailView: View {
                     .frame(width: 34, height: 34)
                 Circle()
                     .trim(from: 0, to: CGFloat(remaining) / CGFloat(account.period))
-                    .stroke(remaining <= 5 ? Color.orange : Color.green, lineWidth: 2.5)
+                    .stroke(remaining <= 5 ? Color.orange : Color.teal, lineWidth: 2.5)
                     .frame(width: 34, height: 34)
                     .rotationEffect(.degrees(-90))
                 Text("\(remaining)")
                     .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(remaining <= 5 ? .orange : .primary)
+                    .foregroundStyle(remaining <= 5 ? .orange : .teal)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -283,7 +279,7 @@ struct AccountDetailView: View {
     private func saveEdits() {
         var updated = account
         updated.name = draftName.trimmingCharacters(in: .whitespaces)
-        updated.tag = draftTag
+        updated.tag = draftTag.trimmingCharacters(in: .whitespaces)
         guard !updated.name.isEmpty else { return }
         guard (try? storageService.update(updated)) != nil else { return }
         isEditing = false

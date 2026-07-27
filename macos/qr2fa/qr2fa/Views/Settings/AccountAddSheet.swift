@@ -19,7 +19,6 @@ struct AccountAddSheet: View {
     @State private var name = ""
     @State private var secret = ""
     @State private var tag = ""
-    @State private var showTagPopover = false
 
     // Shared
     @State private var errorMessage: String?
@@ -176,15 +175,10 @@ struct AccountAddSheet: View {
                     }
                     Spacer()
                     if !entry.skip {
-                        Picker("", selection: $entry.tag) {
-                            Text("태그 없음").tag("")
-                            Text("prod").tag("prod")
-                            Text("dev").tag("dev")
-                            Text("staging").tag("staging")
-                        }
-                        .labelsHidden()
-                        .font(.system(size: 11))
-                        .frame(width: 100)
+                        TextField("태그", text: $entry.tag)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(size: 11))
+                            .frame(width: 100)
                     }
                 }
                 .padding(.vertical, 3)
@@ -212,14 +206,8 @@ struct AccountAddSheet: View {
                 }
                 GridRow {
                     Text("태그").font(.system(size: 10)).foregroundStyle(.secondary).gridColumnAlignment(.trailing)
-                    HStack {
-                        TagBadgeView(tag: tag, showEditHint: true)
-                            .onTapGesture { showTagPopover = true }
-                            .popover(isPresented: $showTagPopover, arrowEdge: .bottom) {
-                                TagSelectorPopover(tag: $tag)
-                            }
-                        Spacer()
-                    }
+                    TextField("선택 사항", text: $tag)
+                        .textFieldStyle(.roundedBorder).font(.system(size: 12))
                 }
             }
         }
@@ -247,15 +235,9 @@ struct AccountAddSheet: View {
                 }
                 GridRow {
                     fieldLabel("태그")
-                    HStack {
-                        TagBadgeView(tag: tag, showEditHint: true)
-                            .onTapGesture { showTagPopover = true }
-                            .popover(isPresented: $showTagPopover, arrowEdge: .bottom) {
-                                TagSelectorPopover(tag: $tag)
-                            }
-                        Spacer()
-                    }
-                    .gridCellColumns(3)
+                    TextField("선택 사항", text: $tag)
+                        .textFieldStyle(.roundedBorder).font(.system(size: 12))
+                        .gridCellColumns(3)
                 }
             }
         }
@@ -315,18 +297,18 @@ struct AccountAddSheet: View {
                 if !migrationAccounts.isEmpty {
                     for entry in migrationAccounts where !entry.skip {
                         var acc = entry.account
-                        acc.tag = entry.tag
+                        acc.tag = entry.tag.trimmingCharacters(in: .whitespaces)
                         try storageService.add(acc)
                     }
                 } else if var acc = parsedAccount {
-                    acc.tag = tag
+                    acc.tag = tag.trimmingCharacters(in: .whitespaces)
                     try storageService.add(acc)
                 }
             case .manual:
                 let clean = secret.uppercased().trimmingCharacters(in: CharacterSet(charactersIn: "= "))
                 let acc = Account(
                     id: 0, name: name, issuer: issuer, secret: clean,
-                    tag: tag, algorithm: "SHA1", digits: 6, period: 30, createdAt: Date()
+                    tag: tag.trimmingCharacters(in: .whitespaces), algorithm: "SHA1", digits: 6, period: 30, createdAt: Date()
                 )
                 try storageService.add(acc)
             }
