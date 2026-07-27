@@ -227,6 +227,7 @@ struct AccountDetailView: View {
                     .blur(radius: qrRevealed ? 0 : 12)
                     .animation(.easeInOut(duration: 0.2), value: qrRevealed)
                     .frame(maxWidth: .infinity)
+                    .padding(.bottom, 8)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
