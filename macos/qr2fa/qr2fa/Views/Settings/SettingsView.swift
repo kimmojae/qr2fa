@@ -141,6 +141,16 @@ struct SettingsView: View {
             selectedAccountID = nil
             isEditingAccount = false
         }
+        .onChange(of: issuers) {
+            // 서비스 목록은 계정에서 파생된다 — 마지막 계정이 사라지면(삭제, CLI 쪽 편집,
+            // issuer 이름 변경) 그 서비스는 사이드바에서 없어지는데, selectedIssuer는
+            // 사라진 이름을 그대로 붙들고 있어 "빈 서비스"가 선택된 것처럼 보인다.
+            // 그런 상태가 되면 "모든 계정"으로 되돌린다.
+            guard let issuer = selectedIssuer,
+                  issuer != "__all__", issuer != "__general__",
+                  !issuers.contains(issuer) else { return }
+            selectedIssuer = "__all__"
+        }
         .onChange(of: selectedIssuer) {
             // sidebarView 안이 아니라 여기(Group)에 붙인다 — sidebarView는 일반⇄계정 전환마다
             // 다시 마운트되는 인스턴스라, 전환을 유발한 바로 그 선택 변경에 대해서는 onChange가
