@@ -28,9 +28,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         observeAccounts()
     }
 
-    /// SwiftUI Window 씬이 만든 설정 창. (상태바 창은 canBecomeMain == false 라 제외된다)
+    /// SwiftUI Settings 씬이 만든 창.
+    ///
+    /// 예전엔 "메인이 될 수 있는 첫 창"으로 찾았는데, 온보딩 씬이 생기면서 그 전제가 깨졌다 —
+    /// 온보딩 창이 먼저 만들어지고 `dismissWindow`는 order-out일 뿐 `NSApp.windows`에서
+    /// 빼주지 않아, 닫힌 온보딩 창을 집어 willClose 옵저버가 엉뚱한 창에 붙었다(설정 창을
+    /// 닫아도 `.accessory`로 안 돌아가 Dock 아이콘이 남았다). 씬 id로 정확히 고른다.
+    /// SwiftUI는 씬 id를 창의 identifier와 frameAutosaveName에 넣는데, 어느 쪽이 채워질지는
+    /// 보장되지 않아 둘 다 본다.
     private func settingsSceneWindow() -> NSWindow? {
-        NSApp.windows.first { $0.canBecomeMain }
+        NSApp.windows.first {
+            $0.identifier?.rawValue == AppWindowID.settings
+                || $0.frameAutosaveName == AppWindowID.settings
+        }
     }
 
     private func setupStatusItem() {
