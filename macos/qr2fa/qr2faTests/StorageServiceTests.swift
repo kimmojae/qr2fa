@@ -175,4 +175,94 @@ final class StorageServiceTests: XCTestCase {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         XCTAssertEqual(StorageService.localDefaultDirectory(), "\(home)/.config/qr2fa")
     }
+
+    // MARK: - commitInitialLocation
+
+    private func makeTempDir() -> String {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try! FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: dir) }
+        return dir.path
+    }
+
+    private func writeStorage(at path: String, issuer: String) throws {
+        let account = Account(
+            id: 1, name: "user@example.com", issuer: issuer,
+            secret: "JBSWY3DPEHPK3PXP", tag: "",
+            algorithm: "SHA1", digits: 6, period: 30, createdAt: Date()
+        )
+        let storage = AccountStorage(version: "1.0", nextId: 1, accounts: [account])
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let dir = URL(fileURLWithPath: path).deletingLastPathComponent().path
+        try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        try encoder.encode(storage).write(to: URL(fileURLWithPath: path))
+    }
+
+    /// 새 Mac에서 iCloud를 고르는 정상 경로 — 대상에 이미 있는 계정을 그대로 읽어야 한다.
+    func test_commitInitialLocation_keepsExistingTargetFile() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+        try writeStorage(at: "\(targetDir)/accounts.json", issuer: "TargetService")
+
+        // 임시 경로에도 다른 파일이 있는 상태(온보딩을 닫고 계정을 추가한 경우)
+        try writeStorage(at: tempPath, issuer: "ProvisionalService")
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        try service.commitInitialLocation(directory: targetDir)
+
+        XCTAssertEqual(service.storagePath, "\(targetDir)/accounts.json")
+        XCTAssertEqual(service.accounts.first?.issuer, "TargetService")
+        // 임시 파일은 그대로 남아 있어야 한다 (지우지 않음)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: tempPath))
+    }
+
+    /// 대상이 비어 있으면 온보딩 중 임시로 쌓인 계정을 옮겨 간다.
+    func test_commitInitialLocation_movesProvisionalFile() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+        try writeStorage(at: tempPath, issuer: "ProvisionalService")
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        try service.commitInitialLocation(directory: targetDir)
+
+        XCTAssertEqual(service.accounts.first?.issuer, "ProvisionalService")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: tempPath))
+    }
+
+    func test_commitInitialLocation_emptyStart() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        try service.commitInitialLocation(directory: targetDir)
+
+        XCTAssertTrue(service.accounts.isEmpty)
+        XCTAssertEqual(service.storagePath, "\(targetDir)/accounts.json")
+    }
+
+    func test_commitInitialLocation_persistsChoice() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        try service.commitInitialLocation(directory: targetDir)
+
+        XCTAssertEqual(defaults.string(forKey: StorageService.storageDirectoryKey), targetDir)
+        XCTAssertFalse(service.needsLocationChoice)
+    }
+
+    /// 복원 후에도 온보딩이 다시 뜨면 안 된다.
+    func test_resetToDefaultPath_keepsStoredChoice() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        try service.commitInitialLocation(directory: targetDir)
+        try service.resetToDefaultPath()
+
+        XCTAssertFalse(service.needsLocationChoice)
+        XCTAssertTrue(service.isDefaultPath)
+    }
 }

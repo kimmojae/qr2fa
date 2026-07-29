@@ -92,6 +92,29 @@ final class StorageService {
         try load()
     }
 
+    /// 온보딩에서 고른 위치를 확정한다.
+    ///
+    /// `changePath(to:)`와 달리 대상 파일을 절대 덮어쓰지 않는다. 온보딩 창을 닫고 계정을
+    /// 추가한 뒤 다음 실행에서 iCloud를 고르는 경우, 복사 방식이면 iCloud에 있던 계정이
+    /// 임시 파일로 덮여 날아간다.
+    func commitInitialLocation(directory: String) throws {
+        let fm = FileManager.default
+        let target = "\(directory)/accounts.json"
+        try fm.createDirectory(atPath: directory, withIntermediateDirectories: true)
+
+        // 대상이 비어 있을 때만 임시 파일을 옮긴다. 대상에 이미 파일이 있으면 그쪽이 정본.
+        if !fm.fileExists(atPath: target),
+           storagePath != target,
+           fm.fileExists(atPath: storagePath) {
+            try fm.moveItem(atPath: storagePath, toPath: target)
+        }
+
+        defaults.set(directory, forKey: StorageService.storageDirectoryKey)
+        storagePath = target
+        startFileWatcher()
+        try load()
+    }
+
     // MARK: - Load / Save
 
     func load() throws {
