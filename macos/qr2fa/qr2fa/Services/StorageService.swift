@@ -73,6 +73,32 @@ final class StorageService {
         storagePath == "\(defaultDirectory)/accounts.json"
     }
 
+    // MARK: - Permissions
+
+    /// 이 앱이 새로 만드는 저장 파일/디렉터리의 권한. 내용이 평문 TOTP 시크릿이라 소유자
+    /// 전용이어야 한다. Go CLI(`cli/internal/storage/storage.go`)도 0600/0700을 쓴다 —
+    /// 두 앱이 같은 파일을 공유하므로 값을 맞춰 둔다.
+    static let filePermissions = 0o600
+    static let directoryPermissions = 0o700
+
+    /// 새로 만드는 디렉터리는 0700으로. 이미 있는 디렉터리에는 attributes가 적용되지 않으므로
+    /// 사용자가 조정해 둔 권한을 덮어쓰지 않는다.
+    static func createDirectory(_ path: String) throws {
+        try FileManager.default.createDirectory(
+            atPath: path,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: directoryPermissions]
+        )
+    }
+
+    /// 새로 만든 항목을 소유자 전용으로 잠근다.
+    ///
+    /// 실패를 무시하는 건 의도적이다 — iCloud Drive처럼 POSIX 권한을 그대로 유지하지 않는
+    /// 위치가 있는데, 권한을 못 걸었다고 저장 자체가 실패하면 안 된다(best-effort).
+    static func restrictPermissions(_ path: String, to mode: Int) {
+        try? FileManager.default.setAttributes([.posixPermissions: mode], ofItemAtPath: path)
+    }
+
     // MARK: - Path change
 
     /// 저장 위치를 옮길 때 어느 쪽 파일을 정본으로 삼을지.
@@ -141,13 +167,16 @@ final class StorageService {
     func changePath(to newPath: String, strategy: PathChangeStrategy) throws -> String? {
         let fm = FileManager.default
         let newDir = URL(fileURLWithPath: newPath).deletingLastPathComponent().path
-        try fm.createDirectory(atPath: newDir, withIntermediateDirectories: true)
+        try StorageService.createDirectory(newDir)
 
         var backupPath: String?
         // 같은 경로를 다시 고른 경우 복사는 무의미하고, 백업부터 하면 원본이 사라진다.
         if strategy == .copyCurrent, storagePath != newPath, fm.fileExists(atPath: storagePath) {
             backupPath = try StorageService.backupIfPresent(newPath)
             try fm.copyItem(atPath: storagePath, toPath: newPath)
+            // copyItem은 원본 권한을 그대로 가져온다. 새로 만들어진 파일이므로,
+            // 원본이 느슨했더라도 여기서 잠근다.
+            StorageService.restrictPermissions(newPath, to: StorageService.filePermissions)
         }
 
         defaults.set(newDir, forKey: StorageService.storageDirectoryKey)
@@ -194,7 +223,7 @@ final class StorageService {
     func commitInitialLocation(directory: String) throws -> CommitOutcome {
         let fm = FileManager.default
         let target = "\(directory)/accounts.json"
-        try fm.createDirectory(atPath: directory, withIntermediateDirectories: true)
+        try StorageService.createDirectory(directory)
 
         var outcome = CommitOutcome()
         let targetExists = fm.fileExists(atPath: target)
@@ -246,11 +275,31 @@ final class StorageService {
         encoder.outputFormatting = [.prettyPrinted]
         let data = try encoder.encode(storage)
 
+        let fm = FileManager.default
         let dir = URL(fileURLWithPath: storagePath).deletingLastPathComponent().path
-        try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        try StorageService.createDirectory(dir)
+
+        // 시크릿이 한 순간도 느슨한 권한으로 디스크에 존재하면 안 된다. 그래서 빈 파일을
+        // 0600으로 먼저 만들고 거기에 덮어쓴다 — 비원자적 write는 inode와 권한을 유지하므로
+        // 내용이 들어가는 시점엔 이미 잠겨 있다. (Data.write는 권한을 지정할 수 없어서
+        // 그냥 쓰면 umask대로 보통 0644가 된다.)
         let tempPath = storagePath + ".tmp"
+        let createdLocked = fm.createFile(
+            atPath: tempPath,
+            contents: nil,
+            attributes: [.posixPermissions: StorageService.filePermissions]
+        )
         try data.write(to: URL(fileURLWithPath: tempPath))
-        _ = try FileManager.default.replaceItemAt(
+        if !createdLocked {
+            // 권한을 지정해 만들지 못한 경우(권한을 지원하지 않는 파일시스템 등)라도
+            // 뒤늦게나마 잠가 본다. 실패해도 저장은 계속한다.
+            StorageService.restrictPermissions(tempPath, to: StorageService.filePermissions)
+        }
+
+        // replaceItemAt은 대상이 이미 있으면 그 파일의 권한을 보존한다 — 사용자가 의도적으로
+        // 조정했을 수 있으므로 앱이 임의로 바꾸지 않는다. 대상이 없을 때만 임시 파일의
+        // 0600이 그대로 새 파일의 권한이 된다.
+        _ = try fm.replaceItemAt(
             URL(fileURLWithPath: storagePath),
             withItemAt: URL(fileURLWithPath: tempPath)
         )

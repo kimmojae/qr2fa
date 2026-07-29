@@ -450,6 +450,88 @@ final class StorageServiceTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: backup))
     }
 
+    // MARK: - Permissions
+
+    private func permissions(of path: String) throws -> Int {
+        let attrs = try FileManager.default.attributesOfItem(atPath: path)
+        return try XCTUnwrap(attrs[.posixPermissions] as? NSNumber).intValue
+    }
+
+    private func makeAccount(issuer: String = "GitHub") -> Account {
+        Account(
+            id: 0, name: "user", issuer: issuer,
+            secret: "JBSWY3DPEHPK3PXP", tag: "",
+            algorithm: "SHA1", digits: 6, period: 30, createdAt: Date()
+        )
+    }
+
+    /// 내용이 평문 TOTP 시크릿이라 앱이 새로 만드는 파일은 소유자 전용이어야 한다.
+    func test_save_createsOwnerOnlyFile() throws {
+        let path = "\(makeTempDir())/fresh/accounts.json"
+        let service = StorageService(path: path, defaults: makeDefaults())
+        try service.add(makeAccount())
+
+        XCTAssertEqual(try permissions(of: path), 0o600)
+    }
+
+    /// 담는 디렉터리도 0700. 실제로 이 디렉터리를 만드는 건 StorageService.init이 띄우는
+    /// FileWatcher라, save()만 고쳐서는 잡히지 않는 경로다.
+    func test_save_createsOwnerOnlyDirectory() throws {
+        let dir = "\(makeTempDir())/fresh"
+        let service = StorageService(path: "\(dir)/accounts.json", defaults: makeDefaults())
+        try service.add(makeAccount())
+
+        XCTAssertEqual(try permissions(of: dir), 0o700)
+    }
+
+    /// 저장 도중에도 느슨한 권한의 임시 파일이 남으면 안 된다.
+    func test_save_leavesNoLooseTempFile() throws {
+        let dir = "\(makeTempDir())/fresh"
+        let path = "\(dir)/accounts.json"
+        let service = StorageService(path: path, defaults: makeDefaults())
+        try service.add(makeAccount())
+
+        let leftovers = try FileManager.default.contentsOfDirectory(atPath: dir)
+        XCTAssertEqual(leftovers, ["accounts.json"])
+    }
+
+    /// 이미 있는 파일의 권한은 앱이 바꾸지 않는다 — 사용자가 의도적으로 조정했을 수 있다.
+    func test_save_keepsExistingFilePermissions() throws {
+        let path = "\(makeTempDir())/accounts.json"
+        XCTAssertTrue(FileManager.default.createFile(
+            atPath: path, contents: Data("{}".utf8), attributes: [.posixPermissions: 0o644]
+        ))
+
+        let service = StorageService(path: path, defaults: makeDefaults())
+        try service.add(makeAccount())
+
+        XCTAssertEqual(try permissions(of: path), 0o644)
+    }
+
+    /// 위치를 옮기며 만드는 사본도 새 파일이다 — 원본이 느슨했더라도 잠근다.
+    func test_changePath_copyIsOwnerOnly() throws {
+        let defaults = makeDefaults()
+        let targetDir = "\(makeTempDir())/fresh"
+        let target = "\(targetDir)/accounts.json"
+        try writeStorage(at: tempPath, issuer: "CurrentService")
+        try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: tempPath)
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        try service.load()
+        try service.changePath(to: target, strategy: .copyCurrent)
+
+        XCTAssertEqual(try permissions(of: target), 0o600)
+        XCTAssertEqual(try permissions(of: targetDir), 0o700)
+    }
+
+    func test_commitInitialLocation_createsOwnerOnlyDirectory() throws {
+        let directory = "\(makeTempDir())/fresh"
+        let service = StorageService(path: tempPath, defaults: makeDefaults())
+        try service.commitInitialLocation(directory: directory)
+
+        XCTAssertEqual(try permissions(of: directory), 0o700)
+    }
+
     // MARK: - inspectTarget
 
     func test_inspectTarget_absent() {
