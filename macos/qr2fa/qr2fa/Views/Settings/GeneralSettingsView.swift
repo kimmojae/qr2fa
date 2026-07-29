@@ -43,7 +43,9 @@ struct GeneralSettingsView: View {
                 HStack(spacing: 8) {
                     Button("변경…") { changeLocation() }
                     Button("Finder에서 보기") { revealInFinder() }
-                    Button("기본값으로 복원") { resetToDefault() }
+                    // "기본값으로 복원"이라고 쓰면 설정만 초기화되는 것처럼 읽히지만,
+                    // 실제로는 저장 폴더가 옮겨가고 계정 파일이 따라간다. 라벨을 동작에 맞춘다.
+                    Button("기본 폴더로 되돌리기") { resetToDefault() }
                         .disabled(storageService.isDefaultPath)
                 }
             }
@@ -111,12 +113,7 @@ struct GeneralSettingsView: View {
         panel.canCreateDirectories = true
         panel.prompt = "선택"
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        let newPath = url.appendingPathComponent("accounts.json").path
-        do {
-            try storageService.changePath(to: newPath)
-        } catch {
-            showError(error)
-        }
+        moveStorage(to: url.path)
     }
 
     private func revealInFinder() {
@@ -124,11 +121,88 @@ struct GeneralSettingsView: View {
     }
 
     private func resetToDefault() {
+        moveStorage(to: storageService.defaultDirectory)
+    }
+
+    /// 저장 폴더를 옮기는 단일 통로. "변경…"과 "기본 폴더로 되돌리기"가 같은 확인 절차를 탄다.
+    ///
+    /// 대상 폴더에 이미 계정 파일이 있으면 조용히 덮어쓰지 않는다 — 어느 쪽을 정본으로 삼을지
+    /// 반드시 사용자에게 묻는다. 여러 Mac에서 각자 계정을 등록한 뒤 iCloud로 합치는 건
+    /// 정상 사용 패턴이고, 그 순간 잘못 고르면 복구 불가능한 MFA 시크릿이 날아간다.
+    private func moveStorage(to directory: String) {
+        let target = "\(directory)/accounts.json"
+        guard target != storageService.storagePath else { return }
+
+        let strategy: StorageService.PathChangeStrategy
+        switch StorageService.inspectTarget(directory: directory) {
+        case .absent:
+            // 대상이 비어 있으면 지금 계정을 그대로 데려간다. 잃을 게 없으니 묻지 않는다.
+            strategy = .copyCurrent
+
+        case .accounts(let count):
+            guard let choice = askWhichFileWins(directory: directory, targetCount: count) else { return }
+            strategy = choice
+
+        case .unreadable:
+            let alert = NSAlert()
+            alert.messageText = "선택한 폴더에 읽을 수 없는 accounts.json이 있습니다"
+            alert.informativeText = """
+                \(abbreviate(target))
+
+                계속하면 그 파일을 accounts.json.bak-<시각>으로 백업한 뒤 현재 계정 \
+                \(storageService.accounts.count)개로 새로 씁니다.
+                """
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "백업 후 계속")
+            alert.addButton(withTitle: "취소")
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+            strategy = .copyCurrent
+        }
+
         do {
-            try storageService.resetToDefaultPath()
+            let backup = try storageService.changePath(to: target, strategy: strategy)
+            if let backup {
+                let done = NSAlert()
+                done.messageText = "저장 위치를 바꿨습니다"
+                done.informativeText = "기존 파일은 다음 이름으로 백업했습니다:\n\(abbreviate(backup))"
+                done.runModal()
+            }
         } catch {
             showError(error)
         }
+    }
+
+    /// 대상에 계정 파일이 있을 때 어느 쪽을 정본으로 삼을지 묻는다. 취소면 nil.
+    private func askWhichFileWins(
+        directory: String,
+        targetCount: Int
+    ) -> StorageService.PathChangeStrategy? {
+        let alert = NSAlert()
+        alert.messageText = "선택한 폴더에 이미 계정 파일이 있습니다"
+        alert.informativeText = """
+            \(abbreviate(directory))/accounts.json — 계정 \(targetCount)개
+            현재 위치 — 계정 \(storageService.accounts.count)개
+
+            어느 쪽을 계속 쓸지 고르세요. 덮어쓰기를 고르면 그 폴더의 기존 파일은 \
+            accounts.json.bak-<시각>으로 백업합니다.
+            """
+        alert.alertStyle = .warning
+        // 기본 버튼은 아무것도 덮지 않는 쪽으로 둔다.
+        alert.addButton(withTitle: "그 폴더의 파일 사용")
+        alert.addButton(withTitle: "현재 계정으로 덮어쓰기")
+        alert.addButton(withTitle: "취소")
+
+        switch alert.runModal() {
+        case .alertFirstButtonReturn:  return .adoptTarget
+        case .alertSecondButtonReturn: return .copyCurrent
+        default:                       return nil
+        }
+    }
+
+    /// 홈 디렉터리 접두사를 ~로 줄여 경로를 읽기 쉽게 만든다.
+    private func abbreviate(_ path: String) -> String {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        return path.hasPrefix(home) ? "~" + path.dropFirst(home.count) : path
     }
 
     private func showError(_ error: Error, title: String = "저장 위치를 변경할 수 없습니다") {

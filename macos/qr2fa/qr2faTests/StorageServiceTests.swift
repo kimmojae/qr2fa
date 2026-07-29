@@ -253,16 +253,169 @@ final class StorageServiceTests: XCTestCase {
         XCTAssertFalse(service.needsLocationChoice)
     }
 
+    // MARK: - changePath
+
+    /// 핵심 안전장치 — 대상 파일을 unlink하지 않는다. 이 앱의 데이터는 복구 불가능한 시크릿이다.
+    func test_changePath_copyCurrent_backsUpTargetInsteadOfDeleting() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+        let target = "\(targetDir)/accounts.json"
+        try writeStorage(at: target, issuer: "TargetService")
+        try writeStorage(at: tempPath, issuer: "CurrentService")
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        try service.load()
+        let backup = try service.changePath(to: target, strategy: .copyCurrent)
+
+        XCTAssertEqual(service.accounts.first?.issuer, "CurrentService")
+
+        // 덮인 파일은 사라지지 않고 백업으로 남아 있어야 한다.
+        let backupPath = try XCTUnwrap(backup)
+        XCTAssertTrue(backupPath.hasPrefix("\(target).bak-"))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: backupPath))
+        XCTAssertEqual(
+            StorageService.inspectFile(at: backupPath), .accounts(count: 1)
+        )
+        let restored = StorageService(path: backupPath, defaults: makeDefaults())
+        try restored.load()
+        XCTAssertEqual(restored.accounts.first?.issuer, "TargetService")
+    }
+
+    /// 여러 Mac을 iCloud로 합칠 때의 정상 경로 — 대상 파일을 정본으로 삼고 아무것도 덮지 않는다.
+    func test_changePath_adoptTarget_leavesBothFilesIntact() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+        let target = "\(targetDir)/accounts.json"
+        try writeStorage(at: target, issuer: "TargetService")
+        try writeStorage(at: tempPath, issuer: "CurrentService")
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        try service.load()
+        let backup = try service.changePath(to: target, strategy: .adoptTarget)
+
+        XCTAssertNil(backup)
+        XCTAssertEqual(service.accounts.first?.issuer, "TargetService")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: tempPath))
+        XCTAssertEqual(
+            try FileManager.default.contentsOfDirectory(atPath: targetDir), ["accounts.json"]
+        )
+    }
+
+    func test_changePath_targetAbsent_carriesAccountsOver() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+        try writeStorage(at: tempPath, issuer: "CurrentService")
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        try service.load()
+        try service.changePath(to: "\(targetDir)/accounts.json", strategy: .copyCurrent)
+
+        XCTAssertEqual(service.accounts.first?.issuer, "CurrentService")
+        XCTAssertEqual(defaults.string(forKey: StorageService.storageDirectoryKey), targetDir)
+    }
+
+    /// 같은 경로를 다시 고르면 아무 일도 없어야 한다 — 백업으로 원본을 치워버리면
+    /// 이어지는 복사의 원본이 사라진다.
+    func test_changePath_sameFileIsNoOp() throws {
+        let defaults = makeDefaults()
+        try writeStorage(at: tempPath, issuer: "CurrentService")
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        let backup = try service.changePath(to: tempPath, strategy: .copyCurrent)
+
+        XCTAssertNil(backup)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: tempPath))
+        XCTAssertEqual(service.accounts.first?.issuer, "CurrentService")
+    }
+
+    func test_backupIfPresent_doesNotCollideWithinSameSecond() throws {
+        let dir = makeTempDir()
+        let path = "\(dir)/accounts.json"
+        try writeStorage(at: path, issuer: "First")
+        let first = try XCTUnwrap(StorageService.backupIfPresent(path))
+        try writeStorage(at: path, issuer: "Second")
+        let second = try XCTUnwrap(StorageService.backupIfPresent(path))
+
+        XCTAssertNotEqual(first, second)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: first))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: second))
+    }
+
+    func test_backupIfPresent_returnsNilWhenAbsent() throws {
+        XCTAssertNil(try StorageService.backupIfPresent("\(makeTempDir())/nope.json"))
+    }
+
+    // MARK: - resetToDefaultPath
+
     /// 복원 후에도 온보딩이 다시 뜨면 안 된다.
     func test_resetToDefaultPath_keepsStoredChoice() throws {
         let defaults = makeDefaults()
         let targetDir = makeTempDir()
+        let defaultDir = makeTempDir()
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = StorageService(
+            path: tempPath, defaults: defaults, defaultDirectory: defaultDir
+        )
         try service.commitInitialLocation(directory: targetDir)
-        try service.resetToDefaultPath()
+        try service.resetToDefaultPath(strategy: .copyCurrent)
 
         XCTAssertFalse(service.needsLocationChoice)
         XCTAssertTrue(service.isDefaultPath)
+    }
+
+    /// 이 브랜치의 존재 이유에 대한 회귀 방지 — 되돌리기가 포인터만 옮기고 계정을
+    /// 두고 오면, 사용자에게는 계정이 전부 사라진 것으로 보인다.
+    func test_resetToDefaultPath_carriesAccountsToEmptyDefaultFolder() throws {
+        let defaults = makeDefaults()
+        let iCloudDir = makeTempDir()
+        let defaultDir = makeTempDir()   // 비어 있는 기본 폴더
+        try writeStorage(at: "\(iCloudDir)/accounts.json", issuer: "ICloudService")
+
+        let service = StorageService(
+            path: "\(iCloudDir)/accounts.json", defaults: defaults, defaultDirectory: defaultDir
+        )
+        try service.load()
+        try service.resetToDefaultPath(strategy: .copyCurrent)
+
+        XCTAssertEqual(service.storagePath, "\(defaultDir)/accounts.json")
+        XCTAssertEqual(service.accounts.first?.issuer, "ICloudService")
+        // 원본도 그대로 남는다 — 되돌리기는 복사지 이사가 아니다.
+        XCTAssertTrue(FileManager.default.fileExists(atPath: "\(iCloudDir)/accounts.json"))
+    }
+
+    /// 기본 폴더에 이미 파일이 있으면(당황해서 계정을 다시 등록한 경우) 그것도 백업된다.
+    func test_resetToDefaultPath_backsUpExistingDefaultFile() throws {
+        let defaults = makeDefaults()
+        let iCloudDir = makeTempDir()
+        let defaultDir = makeTempDir()
+        try writeStorage(at: "\(iCloudDir)/accounts.json", issuer: "ICloudService")
+        try writeStorage(at: "\(defaultDir)/accounts.json", issuer: "ReRegistered")
+
+        let service = StorageService(
+            path: "\(iCloudDir)/accounts.json", defaults: defaults, defaultDirectory: defaultDir
+        )
+        try service.load()
+        let backup = try XCTUnwrap(service.resetToDefaultPath(strategy: .copyCurrent))
+
+        XCTAssertEqual(service.accounts.first?.issuer, "ICloudService")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: backup))
+    }
+
+    // MARK: - inspectTarget
+
+    func test_inspectTarget_absent() {
+        XCTAssertEqual(StorageService.inspectTarget(directory: makeTempDir()), .absent)
+    }
+
+    func test_inspectTarget_countsAccounts() throws {
+        let dir = makeTempDir()
+        try writeStorage(at: "\(dir)/accounts.json", issuer: "AWS")
+        XCTAssertEqual(StorageService.inspectTarget(directory: dir), .accounts(count: 1))
+    }
+
+    func test_inspectTarget_unreadable() throws {
+        let dir = makeTempDir()
+        try "not json".write(toFile: "\(dir)/accounts.json", atomically: true, encoding: .utf8)
+        XCTAssertEqual(StorageService.inspectTarget(directory: dir), .unreadable)
     }
 }
