@@ -9,20 +9,17 @@ struct OnboardingView: View {
     /// 확정에 성공했을 때 호출된다. 실패하면 호출하지 않고 이 화면에 머문다.
     let onFinish: () -> Void
 
-    enum Choice: Hashable { case iCloud, local, custom }
-
     // iCloud를 쓸 수 없는 Mac에서는 "이 Mac에만 저장"으로 시작한다.
-    @State private var choice: Choice =
+    @State private var choice: StorageLocationChoice =
         StorageService.iCloudDirectory() == nil ? .local : .iCloud
     @State private var customDirectory: String?
 
     private let iCloudDirectory = StorageService.iCloudDirectory()
-    private let localDirectory = StorageService.localDefaultDirectory()
 
     private var selectedDirectory: String? {
         switch choice {
         case .iCloud: return iCloudDirectory
-        case .local:  return localDirectory
+        case .local:  return storageService.defaultDirectory
         case .custom: return customDirectory
         }
     }
@@ -36,30 +33,16 @@ struct OnboardingView: View {
 
             Form {
                 Section {
-                    Picker("", selection: $choice) {
-                        row(
-                            "iCloud Drive",
-                            iCloudDirectory == nil
-                                ? "iCloud Drive가 꺼져 있습니다"
-                                : "다른 Mac에서도 같은 계정이 보입니다"
-                        )
-                        .disabled(iCloudDirectory == nil)
-                        .tag(Choice.iCloud)
-
-                        row("이 Mac에만 저장", "이 Mac 밖으로 나가지 않습니다")
-                            .tag(Choice.local)
-
-                        row("직접 선택…", "Dropbox 등 원하는 폴더")
-                            .tag(Choice.custom)
-                    }
-                    .pickerStyle(.radioGroup)
-                    .labelsHidden()
+                    StorageLocationPicker(
+                        selection: $choice,
+                        iCloudAvailable: iCloudDirectory != nil
+                    )
                 }
 
                 Section {
                     LabeledContent("저장 폴더") {
                         HStack(spacing: 8) {
-                            Text(selectedDirectory.map(abbreviate) ?? "선택되지 않음")
+                            Text(selectedDirectory.map(abbreviateHome) ?? "선택되지 않음")
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                                 .truncationMode(.middle)
@@ -98,42 +81,7 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Rows
-
-    @ViewBuilder
-    private func row(_ title: String, _ subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(title)
-            Text(subtitle)
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    /// 홈 디렉터리 접두사를 ~로 줄여 경로를 읽기 쉽게 만든다.
-    private func abbreviate(_ path: String) -> String {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        return path.hasPrefix(home) ? "~" + path.dropFirst(home.count) : path
-    }
-
     // MARK: - Actions
-
-    /// NSOpenPanel을 연다. `.onChange(of:)` 콜백 도중 runModal()을 곧바로 호출하면
-    /// SwiftUI의 상태 갱신 트랜잭션과 겹쳐 패널이 아예 뜨지 않을 수 있어 다음 런루프
-    /// 틱으로 미룬다. 이 앱은 LSUIElement(액세서리) 앱이라 전면에 활성화돼 있지
-    /// 않으면 패널이 뒤로 밀리거나 키 입력을 못 받을 수 있어 활성화도 먼저 해준다.
-    /// GeneralSettingsView.changeLocation()과 같은 패널 설정을 쓴다.
-    private func presentDirectoryPicker(completion: @escaping (String?) -> Void) {
-        DispatchQueue.main.async {
-            NSApp.activate(ignoringOtherApps: true)
-            let panel = NSOpenPanel()
-            panel.canChooseDirectories = true
-            panel.canChooseFiles = false
-            panel.canCreateDirectories = true
-            panel.prompt = "선택"
-            completion(panel.runModal() == .OK ? panel.url?.path : nil)
-        }
-    }
 
     private func pickCustomDirectory() {
         presentDirectoryPicker { directory in
@@ -169,7 +117,7 @@ struct OnboardingView: View {
             lines.append("""
                 선택한 폴더에 이미 계정 파일이 있어 그쪽을 그대로 씁니다.
                 이전 위치에 계정 \(outcome.leftBehindCount)개가 남아 있습니다:
-                \(abbreviate(path))
+                \(abbreviateHome(path))
                 필요하면 Finder에서 직접 옮기세요 — 자동으로 지우지 않습니다.
                 """)
         }

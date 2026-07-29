@@ -5,6 +5,8 @@ struct GeneralSettingsView: View {
     @Environment(StorageService.self) private var storageService
     @State private var startAtLogin = SMAppService.mainApp.status == .enabled
     @State private var showingLocationInfo = false
+    /// 취소된 선택을 되돌리려고 Picker를 강제로 다시 그리는 카운터. `locationBinding` 참고.
+    @State private var pickerRevision = 0
 
     var body: some View {
         Form {
@@ -40,13 +42,21 @@ struct GeneralSettingsView: View {
                         }
                     }
                 }
+                // 온보딩과 같은 세 선택지. 폴더 패널만 두면 앱의 기본 iCloud 위치가
+                // 숨김 폴더라 사용자가 그리로 돌아갈 방법이 없다.
+                StorageLocationPicker(
+                    selection: locationBinding,
+                    iCloudAvailable: StorageService.iCloudDirectory() != nil
+                )
+                .id(pickerRevision)
+
                 HStack(spacing: 8) {
-                    Button("변경…") { changeLocation() }
+                    // 이미 "직접 선택…"인 상태에서 다른 폴더로 바꿀 수 있는 유일한 통로 —
+                    // 선택이 이미 .custom이라 라디오를 다시 눌러도 setter가 안 걸린다.
+                    if currentChoice == .custom {
+                        Button("다른 폴더 선택…") { requestLocation(.custom) }
+                    }
                     Button("Finder에서 보기") { revealInFinder() }
-                    // "기본값으로 복원"이라고 쓰면 설정만 초기화되는 것처럼 읽히지만,
-                    // 실제로는 저장 폴더가 옮겨가고 계정 파일이 따라간다. 라벨을 동작에 맞춘다.
-                    Button("기본 폴더로 되돌리기") { resetToDefault() }
-                        .disabled(currentDirectory == storageService.defaultDirectory)
                 }
             }
 
@@ -103,34 +113,54 @@ struct GeneralSettingsView: View {
         }
     }
 
-    private func changeLocation() {
-        // 이 앱은 LSUIElement(액세서리) 앱이라, 혹시 전면이 아니게 된 상태에서
-        // 패널을 열면 뒤로 밀릴 수 있어 먼저 활성화해 둔다.
-        NSApp.activate(ignoringOtherApps: true)
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.canCreateDirectories = true
-        panel.prompt = "선택"
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        moveStorage(to: url.path)
-    }
-
     private func revealInFinder() {
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: storageService.storagePath)])
     }
+
+    // MARK: - Location choice
 
     private var currentDirectory: String {
         URL(fileURLWithPath: storageService.storagePath).deletingLastPathComponent().path
     }
 
-    private func resetToDefault() {
-        moveStorage(to: storageService.defaultDirectory)
+    private var currentChoice: StorageLocationChoice {
+        .matching(directory: currentDirectory, localDirectory: storageService.defaultDirectory)
     }
 
-    /// 저장 폴더를 옮기는 단일 통로. "변경…"과 "기본 폴더로 되돌리기"가 같은 확인 절차를 탄다.
+    /// 라디오는 상태를 따로 들지 않고 실제 저장 경로에서 파생시킨다 — 사용자가 확인
+    /// 대화상자를 취소하면 경로가 그대로라 선택도 저절로 되돌아온다. 다만 SwiftUI는 바인딩
+    /// 값이 안 바뀌면 Picker를 다시 그리지 않으므로, `pickerRevision`을 올려 강제로 되돌린다.
+    private var locationBinding: Binding<StorageLocationChoice> {
+        Binding(get: { currentChoice }, set: { requestLocation($0) })
+    }
+
+    private func requestLocation(_ choice: StorageLocationChoice) {
+        // SwiftUI의 상태 갱신 트랜잭션 도중 모달(NSOpenPanel/NSAlert)을 띄우면 아예 뜨지
+        // 않을 수 있어 다음 런루프 틱으로 미룬다.
+        switch choice {
+        case .iCloud:
+            DispatchQueue.main.async {
+                if let directory = StorageService.iCloudDirectory() {
+                    moveStorage(to: directory)
+                }
+                pickerRevision += 1
+            }
+        case .local:
+            DispatchQueue.main.async {
+                moveStorage(to: storageService.defaultDirectory)
+                pickerRevision += 1
+            }
+        case .custom:
+            presentDirectoryPicker { directory in
+                if let directory { moveStorage(to: directory) }
+                pickerRevision += 1
+            }
+        }
+    }
+
+    /// 저장 폴더를 옮기는 단일 통로. 세 선택지가 모두 같은 확인 절차를 탄다.
     ///
-    /// 대상 폴더에 이미 계정 파일이 있으면 조용히 덮어쓰지 않는다 — 어느 쪽을 정본으로 삼을지
+    /// 대상 폴더에 다른 계정 파일이 있으면 조용히 덮어쓰지 않는다 — 어느 쪽을 정본으로 삼을지
     /// 반드시 사용자에게 묻는다. 여러 Mac에서 각자 계정을 등록한 뒤 iCloud로 합치는 건
     /// 정상 사용 패턴이고, 그 순간 잘못 고르면 복구 불가능한 MFA 시크릿이 날아간다.
     private func moveStorage(to directory: String) {
@@ -160,43 +190,11 @@ struct GeneralSettingsView: View {
         }
     }
 
-    /// 옮긴 뒤 사용자가 알아야 하는 것들 — 백업 파일, 이전 위치에 남은 파일, 로드 실패.
-    private func showNotice(_ outcome: StorageService.PathChangeOutcome) {
-        var lines: [String] = []
-
-        if let backup = outcome.backupPath {
-            lines.append("""
-                그 폴더에 있던 파일은 다음 이름으로 백업했습니다:
-                \(abbreviate(backup))
-                """)
-        }
-        if let left = outcome.leftBehindPath {
-            lines.append("""
-                이전 위치에 계정 \(outcome.leftBehindCount)개가 그대로 남아 있습니다:
-                \(abbreviate(left))
-                자동으로 지우지 않습니다. 그대로 두면 지금부터 두 파일이 따로 갈라지고, \
-                그 폴더가 iCloud라면 다른 Mac은 갱신이 멈춘 옛 데이터를 계속 보게 됩니다.
-                """)
-        }
-        if let error = outcome.loadError {
-            lines.append("""
-                새 위치의 파일을 읽지 못했습니다:
-                \(error.localizedDescription)
-                """)
-        }
-
-        let alert = NSAlert()
-        alert.messageText = "저장 위치를 바꿨습니다"
-        alert.informativeText = lines.joined(separator: "\n\n")
-        alert.alertStyle = outcome.loadError == nil ? .informational : .warning
-        alert.runModal()
-    }
-
     private func confirmOverwriteUnreadable(target: String) -> Bool {
         let alert = NSAlert()
         alert.messageText = "선택한 폴더에 읽을 수 없는 accounts.json이 있습니다"
         alert.informativeText = """
-            \(abbreviate(target))
+            \(abbreviateHome(target))
 
             계속하면 그 파일을 accounts.json.bak-<시각>으로 백업한 뒤 현재 계정 \
             \(storageService.accounts.count)개로 새로 씁니다.
@@ -216,7 +214,7 @@ struct GeneralSettingsView: View {
         let alert = NSAlert()
         alert.messageText = "선택한 폴더에 이미 계정 파일이 있습니다"
         alert.informativeText = """
-            \(abbreviate(directory))/accounts.json — 계정 \(targetCount)개
+            \(abbreviateHome(directory))/accounts.json — 계정 \(targetCount)개
             현재 위치 — 계정 \(storageService.accounts.count)개
 
             어느 쪽을 계속 쓸지 고르세요. 덮어쓰기를 고르면 그 폴더의 기존 파일은 \
@@ -237,10 +235,36 @@ struct GeneralSettingsView: View {
         }
     }
 
-    /// 홈 디렉터리 접두사를 ~로 줄여 경로를 읽기 쉽게 만든다.
-    private func abbreviate(_ path: String) -> String {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        return path.hasPrefix(home) ? "~" + path.dropFirst(home.count) : path
+    /// 옮긴 뒤 사용자가 알아야 하는 것들 — 백업 파일, 이전 위치에 남은 파일, 로드 실패.
+    private func showNotice(_ outcome: StorageService.PathChangeOutcome) {
+        var lines: [String] = []
+
+        if let backup = outcome.backupPath {
+            lines.append("""
+                그 폴더에 있던 파일은 다음 이름으로 백업했습니다:
+                \(abbreviateHome(backup))
+                """)
+        }
+        if let left = outcome.leftBehindPath {
+            lines.append("""
+                이전 위치에 계정 \(outcome.leftBehindCount)개가 그대로 남아 있습니다:
+                \(abbreviateHome(left))
+                자동으로 지우지 않습니다. 그대로 두면 지금부터 두 파일이 따로 갈라지고, \
+                그 폴더가 iCloud라면 다른 Mac은 갱신이 멈춘 옛 데이터를 계속 보게 됩니다.
+                """)
+        }
+        if let error = outcome.loadError {
+            lines.append("""
+                새 위치의 파일을 읽지 못했습니다:
+                \(error.localizedDescription)
+                """)
+        }
+
+        let alert = NSAlert()
+        alert.messageText = "저장 위치를 바꿨습니다"
+        alert.informativeText = lines.joined(separator: "\n\n")
+        alert.alertStyle = outcome.loadError == nil ? .informational : .warning
+        alert.runModal()
     }
 
     private func showError(_ error: Error, title: String = "저장 위치를 변경할 수 없습니다") {
