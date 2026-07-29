@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		059EB15B7AFEEB0AB286C211 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E55E50489931E956CD012135 /* OnboardingView.swift */; };
 		05D51B269ABE036A6F355C5E /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4506FFA3EC262CFA7C739475 /* StorageService.swift */; };
 		0CC3A6BA472527E06CC133D0 /* AccountMenuItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED616089CB032DBD46721CF3 /* AccountMenuItemView.swift */; };
 		0F36F3866A221AA37520A4B8 /* TOTPGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93979A9D062AA2E1A03EDB8 /* TOTPGenerator.swift */; };
@@ -63,6 +64,7 @@
 		D48BA6FC6E5EEE8F9646710E /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
 		D93979A9D062AA2E1A03EDB8 /* TOTPGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TOTPGenerator.swift; sourceTree = "<group>"; };
 		E51747644CDE502D030DE373 /* AccountDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDetailView.swift; sourceTree = "<group>"; };
+		E55E50489931E956CD012135 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		E70A129B0D600674D2913C90 /* AccountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTests.swift; sourceTree = "<group>"; };
 		ED616089CB032DBD46721CF3 /* AccountMenuItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountMenuItemView.swift; sourceTree = "<group>"; };
 		F0C7D43B89861E28DBD9C096 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -86,6 +88,7 @@
 		187CFDA54EDA3E4EE03F29A9 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				B3E2854BA5DBD362D582A335 /* Onboarding */,
 				AC6AE969CAD16FC5F8710A8D /* Settings */,
 				E51747644CDE502D030DE373 /* AccountDetailView.swift */,
 				ED616089CB032DBD46721CF3 /* AccountMenuItemView.swift */,
@@ -132,6 +135,14 @@
 				33F56D427AB567C03D066E2E /* TagBadgeView.swift */,
 			);
 			path = Settings;
+			sourceTree = "<group>";
+		};
+		B3E2854BA5DBD362D582A335 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				E55E50489931E956CD012135 /* OnboardingView.swift */,
+			);
+			path = Onboarding;
 			sourceTree = "<group>";
 		};
 		B8DD0B5CD5CBBFA7A2CF3B13 /* Products */ = {
@@ -283,6 +294,7 @@
 				128B2AA2B01CF60772055C26 /* FileWatcher.swift in Sources */,
 				94201FB9B05FC82B3E2DD2C2 /* GeneralSettingsView.swift in Sources */,
 				2EA60BDF68A4B9EC16138E37 /* MigrationParser.swift in Sources */,
+				059EB15B7AFEEB0AB286C211 /* OnboardingView.swift in Sources */,
 				11A3598F5D47835AA6D56A2D /* QRCaptureView.swift in Sources */,
 				648AB564F78936D88854AE4E /* SettingsView.swift in Sources */,
 				05D51B269ABE036A6F355C5E /* StorageService.swift in Sources */,
