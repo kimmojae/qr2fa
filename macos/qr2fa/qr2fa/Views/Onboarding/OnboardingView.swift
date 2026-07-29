@@ -88,10 +88,12 @@ struct OnboardingView: View {
         }
         .onChange(of: choice) { oldValue, newValue in
             guard newValue == .custom else { return }
-            if let directory = promptForDirectory() {
-                customDirectory = directory
-            } else {
-                choice = oldValue   // 패널을 취소하면 직전 선택으로 되돌린다
+            presentDirectoryPicker { directory in
+                if let directory {
+                    customDirectory = directory
+                } else {
+                    choice = oldValue   // 패널을 취소하면 직전 선택으로 되돌린다
+                }
             }
         }
     }
@@ -116,20 +118,28 @@ struct OnboardingView: View {
 
     // MARK: - Actions
 
-    /// 취소하면 nil. GeneralSettingsView.changeLocation()과 같은 패널 설정을 쓴다.
-    private func promptForDirectory() -> String? {
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.canCreateDirectories = true
-        panel.prompt = "선택"
-        guard panel.runModal() == .OK, let url = panel.url else { return nil }
-        return url.path
+    /// NSOpenPanel을 연다. `.onChange(of:)` 콜백 도중 runModal()을 곧바로 호출하면
+    /// SwiftUI의 상태 갱신 트랜잭션과 겹쳐 패널이 아예 뜨지 않을 수 있어 다음 런루프
+    /// 틱으로 미룬다. 이 앱은 LSUIElement(액세서리) 앱이라 전면에 활성화돼 있지
+    /// 않으면 패널이 뒤로 밀리거나 키 입력을 못 받을 수 있어 활성화도 먼저 해준다.
+    /// GeneralSettingsView.changeLocation()과 같은 패널 설정을 쓴다.
+    private func presentDirectoryPicker(completion: @escaping (String?) -> Void) {
+        DispatchQueue.main.async {
+            NSApp.activate(ignoringOtherApps: true)
+            let panel = NSOpenPanel()
+            panel.canChooseDirectories = true
+            panel.canChooseFiles = false
+            panel.canCreateDirectories = true
+            panel.prompt = "선택"
+            completion(panel.runModal() == .OK ? panel.url?.path : nil)
+        }
     }
 
     private func pickCustomDirectory() {
-        if let directory = promptForDirectory() {
-            customDirectory = directory
+        presentDirectoryPicker { directory in
+            if let directory {
+                customDirectory = directory
+            }
         }
     }
 

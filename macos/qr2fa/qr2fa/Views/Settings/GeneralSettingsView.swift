@@ -102,6 +102,9 @@ struct GeneralSettingsView: View {
     }
 
     private func changeLocation() {
+        // 이 앱은 LSUIElement(액세서리) 앱이라, 혹시 전면이 아니게 된 상태에서
+        // 패널을 열면 뒤로 밀릴 수 있어 먼저 활성화해 둔다.
+        NSApp.activate(ignoringOtherApps: true)
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
