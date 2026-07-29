@@ -46,7 +46,7 @@ struct GeneralSettingsView: View {
                     // "기본값으로 복원"이라고 쓰면 설정만 초기화되는 것처럼 읽히지만,
                     // 실제로는 저장 폴더가 옮겨가고 계정 파일이 따라간다. 라벨을 동작에 맞춘다.
                     Button("기본 폴더로 되돌리기") { resetToDefault() }
-                        .disabled(storageService.isDefaultPath)
+                        .disabled(currentDirectory == storageService.defaultDirectory)
                 }
             }
 
@@ -120,6 +120,10 @@ struct GeneralSettingsView: View {
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: storageService.storagePath)])
     }
 
+    private var currentDirectory: String {
+        URL(fileURLWithPath: storageService.storagePath).deletingLastPathComponent().path
+    }
+
     private func resetToDefault() {
         moveStorage(to: storageService.defaultDirectory)
     }
@@ -160,16 +164,43 @@ struct GeneralSettingsView: View {
         }
 
         do {
-            let backup = try storageService.changePath(to: target, strategy: strategy)
-            if let backup {
-                let done = NSAlert()
-                done.messageText = "저장 위치를 바꿨습니다"
-                done.informativeText = "기존 파일은 다음 이름으로 백업했습니다:\n\(abbreviate(backup))"
-                done.runModal()
-            }
+            let outcome = try storageService.changePath(to: target, strategy: strategy)
+            if outcome.hasNotice { showNotice(outcome) }
         } catch {
             showError(error)
         }
+    }
+
+    /// 옮긴 뒤 사용자가 알아야 하는 것들 — 백업 파일, 이전 위치에 남은 파일, 로드 실패.
+    private func showNotice(_ outcome: StorageService.PathChangeOutcome) {
+        var lines: [String] = []
+
+        if let backup = outcome.backupPath {
+            lines.append("""
+                그 폴더에 있던 파일은 다음 이름으로 백업했습니다:
+                \(abbreviate(backup))
+                """)
+        }
+        if let left = outcome.leftBehindPath {
+            lines.append("""
+                이전 위치에 계정 \(outcome.leftBehindCount)개가 그대로 남아 있습니다:
+                \(abbreviate(left))
+                자동으로 지우지 않습니다. 그대로 두면 지금부터 두 파일이 따로 갈라지고, \
+                그 폴더가 iCloud라면 다른 Mac은 갱신이 멈춘 옛 데이터를 계속 보게 됩니다.
+                """)
+        }
+        if let error = outcome.loadError {
+            lines.append("""
+                새 위치의 파일을 읽지 못했습니다:
+                \(error.localizedDescription)
+                """)
+        }
+
+        let alert = NSAlert()
+        alert.messageText = "저장 위치를 바꿨습니다"
+        alert.informativeText = lines.joined(separator: "\n\n")
+        alert.alertStyle = outcome.loadError == nil ? .informational : .warning
+        alert.runModal()
     }
 
     /// 대상에 계정 파일이 있을 때 어느 쪽을 정본으로 삼을지 묻는다. 취소면 nil.

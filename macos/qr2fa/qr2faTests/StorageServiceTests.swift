@@ -314,12 +314,12 @@ final class StorageServiceTests: XCTestCase {
 
         let service = StorageService(path: tempPath, defaults: defaults)
         try service.load()
-        let backup = try service.changePath(to: target, strategy: .copyCurrent)
+        let outcome = try service.changePath(to: target, strategy: .copyCurrent)
 
         XCTAssertEqual(service.accounts.first?.issuer, "CurrentService")
 
         // 덮인 파일은 사라지지 않고 백업으로 남아 있어야 한다.
-        let backupPath = try XCTUnwrap(backup)
+        let backupPath = try XCTUnwrap(outcome.backupPath)
         XCTAssertTrue(backupPath.hasPrefix("\(target).bak-"))
         XCTAssertTrue(FileManager.default.fileExists(atPath: backupPath))
         XCTAssertEqual(
@@ -340,9 +340,9 @@ final class StorageServiceTests: XCTestCase {
 
         let service = StorageService(path: tempPath, defaults: defaults)
         try service.load()
-        let backup = try service.changePath(to: target, strategy: .adoptTarget)
+        let outcome = try service.changePath(to: target, strategy: .adoptTarget)
 
-        XCTAssertNil(backup)
+        XCTAssertNil(outcome.backupPath)
         XCTAssertEqual(service.accounts.first?.issuer, "TargetService")
         XCTAssertTrue(FileManager.default.fileExists(atPath: tempPath))
         XCTAssertEqual(
@@ -370,9 +370,9 @@ final class StorageServiceTests: XCTestCase {
         try writeStorage(at: tempPath, issuer: "CurrentService")
 
         let service = StorageService(path: tempPath, defaults: defaults)
-        let backup = try service.changePath(to: tempPath, strategy: .copyCurrent)
+        let outcome = try service.changePath(to: tempPath, strategy: .copyCurrent)
 
-        XCTAssertNil(backup)
+        XCTAssertFalse(outcome.hasNotice)
         XCTAssertTrue(FileManager.default.fileExists(atPath: tempPath))
         XCTAssertEqual(service.accounts.first?.issuer, "CurrentService")
     }
@@ -394,10 +394,10 @@ final class StorageServiceTests: XCTestCase {
         XCTAssertNil(try StorageService.backupIfPresent("\(makeTempDir())/nope.json"))
     }
 
-    // MARK: - resetToDefaultPath
+    // MARK: - 기본 폴더로 되돌리기
 
-    /// 복원 후에도 온보딩이 다시 뜨면 안 된다.
-    func test_resetToDefaultPath_keepsStoredChoice() throws {
+    /// 되돌린 뒤에도 온보딩이 다시 뜨면 안 된다.
+    func test_changePath_toDefaultDirectory_keepsStoredChoice() throws {
         let defaults = makeDefaults()
         let targetDir = makeTempDir()
         let defaultDir = makeTempDir()
@@ -406,15 +406,15 @@ final class StorageServiceTests: XCTestCase {
             path: tempPath, defaults: defaults, defaultDirectory: defaultDir
         )
         try service.commitInitialLocation(directory: targetDir)
-        try service.resetToDefaultPath(strategy: .copyCurrent)
+        try service.changePath(to: "\(defaultDir)/accounts.json", strategy: .copyCurrent)
 
         XCTAssertFalse(service.needsLocationChoice)
-        XCTAssertTrue(service.isDefaultPath)
+        XCTAssertEqual(service.storagePath, "\(defaultDir)/accounts.json")
     }
 
     /// 이 브랜치의 존재 이유에 대한 회귀 방지 — 되돌리기가 포인터만 옮기고 계정을
     /// 두고 오면, 사용자에게는 계정이 전부 사라진 것으로 보인다.
-    func test_resetToDefaultPath_carriesAccountsToEmptyDefaultFolder() throws {
+    func test_changePath_toEmptyDefaultFolder_carriesAccountsOver() throws {
         let defaults = makeDefaults()
         let iCloudDir = makeTempDir()
         let defaultDir = makeTempDir()   // 비어 있는 기본 폴더
@@ -424,7 +424,7 @@ final class StorageServiceTests: XCTestCase {
             path: "\(iCloudDir)/accounts.json", defaults: defaults, defaultDirectory: defaultDir
         )
         try service.load()
-        try service.resetToDefaultPath(strategy: .copyCurrent)
+        try service.changePath(to: "\(defaultDir)/accounts.json", strategy: .copyCurrent)
 
         XCTAssertEqual(service.storagePath, "\(defaultDir)/accounts.json")
         XCTAssertEqual(service.accounts.first?.issuer, "ICloudService")
@@ -433,7 +433,7 @@ final class StorageServiceTests: XCTestCase {
     }
 
     /// 기본 폴더에 이미 파일이 있으면(당황해서 계정을 다시 등록한 경우) 그것도 백업된다.
-    func test_resetToDefaultPath_backsUpExistingDefaultFile() throws {
+    func test_changePath_toDefaultFolderWithFile_backsItUp() throws {
         let defaults = makeDefaults()
         let iCloudDir = makeTempDir()
         let defaultDir = makeTempDir()
@@ -444,10 +444,134 @@ final class StorageServiceTests: XCTestCase {
             path: "\(iCloudDir)/accounts.json", defaults: defaults, defaultDirectory: defaultDir
         )
         try service.load()
-        let backup = try XCTUnwrap(service.resetToDefaultPath(strategy: .copyCurrent))
+        let outcome = try service.changePath(
+            to: "\(defaultDir)/accounts.json", strategy: .copyCurrent
+        )
 
         XCTAssertEqual(service.accounts.first?.issuer, "ICloudService")
-        XCTAssertTrue(FileManager.default.fileExists(atPath: backup))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: try XCTUnwrap(outcome.backupPath)))
+    }
+
+    // MARK: - changePath: 실패·부분성공 경로
+
+    /// 포인터를 확정한 뒤 로드가 실패해도 던지면 안 된다 — 던지면 변경은 이미 영속화됐는데
+    /// 뷰는 "바꿀 수 없습니다"를 띄우고, 사용자는 어긋난 모델 위에서 계속 쓰게 된다.
+    func test_changePath_loadFailureIsReportedNotThrown() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+        let target = "\(targetDir)/accounts.json"
+        try "{ not json".write(toFile: target, atomically: true, encoding: .utf8)
+        try writeStorage(at: tempPath, issuer: "CurrentService")
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        try service.load()
+        let outcome = try service.changePath(to: target, strategy: .adoptTarget)
+
+        XCTAssertNotNil(outcome.loadError)
+        XCTAssertTrue(outcome.hasNotice)
+        // 위치 변경 자체는 성공했다 — 재시도가 아니라 고지가 필요한 상태.
+        XCTAssertEqual(service.storagePath, target)
+        XCTAssertEqual(defaults.string(forKey: StorageService.storageDirectoryKey), targetDir)
+    }
+
+    /// 알럿이 백업을 약속했으면 반드시 만들어야 한다. 현재 파일이 외부에서 사라졌다는 이유로
+    /// 백업도 복사도 건너뛰면, 손상 파일 위에 포인터만 얹힌 뒤 다음 저장에서 그게 사라진다.
+    func test_changePath_backsUpTargetEvenWhenCurrentFileIsGone() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+        let target = "\(targetDir)/accounts.json"
+        try "{ not json".write(toFile: target, atomically: true, encoding: .utf8)
+        try writeStorage(at: tempPath, issuer: "CurrentService")
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        try service.load()
+        // 외부에서 현재 파일이 사라진 상황 (메모리의 계정은 살아 있다)
+        try FileManager.default.removeItem(atPath: tempPath)
+
+        let outcome = try service.changePath(to: target, strategy: .copyCurrent)
+
+        let backupPath = try XCTUnwrap(outcome.backupPath)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: backupPath))
+        // 메모리의 계정이 실제로 새 위치에 놓여야 한다 — 빈 폴더를 가리키면 안 된다.
+        XCTAssertEqual(StorageService.inspectFile(at: target), .accounts(count: 1))
+        XCTAssertEqual(service.accounts.first?.issuer, "CurrentService")
+        XCTAssertNil(outcome.loadError)
+    }
+
+    /// 복사가 실패하면 대상 폴더는 손도 대지 않은 상태여야 한다 — 백업부터 하면
+    /// `.bak-*`만 남고 accounts.json이 사라져, 대상이 iCloud일 때 다른 Mac이 계정 0개가 된다.
+    func test_changePath_copyFailureLeavesTargetIntact() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+        let target = "\(targetDir)/accounts.json"
+        try writeStorage(at: target, issuer: "TargetService")
+        try writeStorage(at: tempPath, issuer: "CurrentService")
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        try service.load()
+
+        // 대상 폴더를 읽기 전용으로 만들어 복사를 실패시킨다.
+        let fm = FileManager.default
+        try fm.setAttributes([.posixPermissions: 0o500], ofItemAtPath: targetDir)
+        addTeardownBlock {
+            try? fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: targetDir)
+        }
+
+        XCTAssertThrowsError(try service.changePath(to: target, strategy: .copyCurrent))
+
+        // 대상 파일은 그대로, 백업도 임시 파일도 생기지 않았다.
+        XCTAssertEqual(try fm.contentsOfDirectory(atPath: targetDir), ["accounts.json"])
+        XCTAssertEqual(StorageService.inspectFile(at: target), .accounts(count: 1))
+        // 포인터도 옮겨가지 않았다.
+        XCTAssertEqual(service.storagePath, tempPath)
+    }
+
+    /// 성공 경로에서도 임시 파일이 남으면 안 된다.
+    func test_changePath_leavesNoStagingFile() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+        try writeStorage(at: tempPath, issuer: "CurrentService")
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        try service.load()
+        try service.changePath(to: "\(targetDir)/accounts.json", strategy: .copyCurrent)
+
+        XCTAssertEqual(
+            try FileManager.default.contentsOfDirectory(atPath: targetDir), ["accounts.json"]
+        )
+    }
+
+    /// 실질 위험은 "원본이 남는 것"이 아니라 그 순간부터 두 파일이 조용히 갈라진다는 것이다 —
+    /// 버려진 iCloud 파일은 계속 동기화되어 다른 Mac은 갱신이 멈춘 옛 데이터를 계속 본다.
+    func test_changePath_reportsLeftBehindAccounts() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+        try writeStorage(at: tempPath, issuer: "CurrentService")
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        try service.load()
+        let outcome = try service.changePath(
+            to: "\(targetDir)/accounts.json", strategy: .copyCurrent
+        )
+
+        XCTAssertEqual(outcome.leftBehindPath, tempPath)
+        XCTAssertEqual(outcome.leftBehindCount, 1)
+        XCTAssertTrue(outcome.hasNotice)
+    }
+
+    /// 이전 위치에 파일이 없으면 알릴 것도 없다.
+    func test_changePath_noLeftBehindNoticeWhenNothingRemains() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        try service.load()
+        let outcome = try service.changePath(
+            to: "\(targetDir)/accounts.json", strategy: .copyCurrent
+        )
+
+        XCTAssertNil(outcome.leftBehindPath)
+        XCTAssertFalse(outcome.hasNotice)
     }
 
     // MARK: - Permissions

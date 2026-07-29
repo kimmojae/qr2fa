@@ -69,10 +69,6 @@ final class StorageService {
         StorageService.storedDirectory(defaults: defaults) == nil
     }
 
-    var isDefaultPath: Bool {
-        storagePath == "\(defaultDirectory)/accounts.json"
-    }
-
     // MARK: - Permissions
 
     /// 이 앱이 새로 만드는 저장 파일/디렉터리의 권한. 내용이 평문 TOTP 시크릿이라 소유자
@@ -97,6 +93,25 @@ final class StorageService {
     /// 위치가 있는데, 권한을 못 걸었다고 저장 자체가 실패하면 안 된다(best-effort).
     static func restrictPermissions(_ path: String, to mode: Int) {
         try? FileManager.default.setAttributes([.posixPermissions: mode], ofItemAtPath: path)
+    }
+
+    /// 새 파일을 0600으로 만든 뒤 거기에 쓴다.
+    ///
+    /// `Data.write(to:)`는 권한을 지정할 수 없어서 그냥 쓰면 umask대로(보통 0644) 만들어지고,
+    /// 그사이 시크릿이 느슨한 권한으로 디스크에 존재하는 창이 생긴다. 빈 파일을 먼저 잠가
+    /// 두고 비원자적으로 덮어쓰면 inode와 권한이 유지되므로 그 창이 없다.
+    private static func writeLocked(_ data: Data, to path: String) throws {
+        let createdLocked = FileManager.default.createFile(
+            atPath: path,
+            contents: nil,
+            attributes: [.posixPermissions: filePermissions]
+        )
+        try data.write(to: URL(fileURLWithPath: path))
+        if !createdLocked {
+            // 권한을 지정해 만들지 못한 경우(권한을 지원하지 않는 파일시스템 등)라도
+            // 뒤늦게나마 잠가 본다. 실패해도 쓰기 자체는 이미 끝났다.
+            restrictPermissions(path, to: filePermissions)
+        }
     }
 
     // MARK: - Path change
@@ -162,39 +177,94 @@ final class StorageService {
         return candidate
     }
 
+    /// `changePath`의 결과. 위치 변경은 성공했지만 사용자에게 알려야 할 게 남은 경우를 담는다.
+    struct PathChangeOutcome {
+        /// 덮어쓰기로 밀려난 대상 파일의 백업 경로.
+        var backupPath: String?
+        /// 위치는 이미 바뀌었는데 새 위치의 파일을 읽지 못했다.
+        var loadError: Error?
+        /// 이전 위치에 그대로 남은 계정 파일. 지우지 않는 건 의도지만, 이 순간부터 두 파일이
+        /// 조용히 갈라지므로(버려진 iCloud 파일은 계속 동기화된다) 반드시 알려야 한다.
+        var leftBehindPath: String?
+        var leftBehindCount: Int = 0
+
+        var hasNotice: Bool {
+            backupPath != nil || loadError != nil || leftBehindPath != nil
+        }
+    }
+
     /// 저장 위치를 바꾼다. 어떤 전략이든 기존 파일을 지우지 않는다 — 덮어쓰기는 항상 백업을 남긴다.
+    ///
+    /// 던지는 건 "위치를 바꾸지 못한" 경우뿐이다. 위치를 바꾼 뒤의 로드 실패는
+    /// `PathChangeOutcome.loadError`로 돌려준다 — 던지면 변경은 이미 영속화됐는데 뷰는
+    /// "바꿀 수 없습니다"를 띄우고, `accounts`는 옛 내용 그대로 남아 모델이 어긋난다.
     @discardableResult
-    func changePath(to newPath: String, strategy: PathChangeStrategy) throws -> String? {
-        let fm = FileManager.default
+    func changePath(to newPath: String, strategy: PathChangeStrategy) throws -> PathChangeOutcome {
+        let previousPath = storagePath
         let newDir = URL(fileURLWithPath: newPath).deletingLastPathComponent().path
         try StorageService.createDirectory(newDir)
 
-        var backupPath: String?
+        var outcome = PathChangeOutcome()
+
         // 같은 경로를 다시 고른 경우 복사는 무의미하고, 백업부터 하면 원본이 사라진다.
-        if strategy == .copyCurrent, storagePath != newPath, fm.fileExists(atPath: storagePath) {
-            backupPath = try StorageService.backupIfPresent(newPath)
-            try fm.copyItem(atPath: storagePath, toPath: newPath)
-            // copyItem은 원본 권한을 그대로 가져온다. 새로 만들어진 파일이므로,
-            // 원본이 느슨했더라도 여기서 잠근다.
-            StorageService.restrictPermissions(newPath, to: StorageService.filePermissions)
+        if strategy == .copyCurrent, previousPath != newPath {
+            outcome.backupPath = try materializeCurrentAccounts(at: newPath)
+        }
+
+        // 어느 전략이든 이전 위치의 파일은 남긴다(복사지 이사가 아니다). 남았다는 사실을
+        // 여기서 확인해 둔다 — 포인터를 옮긴 뒤에는 previousPath를 다시 볼 수 없다.
+        if previousPath != newPath,
+           case .accounts(let count) = StorageService.inspectFile(at: previousPath), count > 0 {
+            outcome.leftBehindPath = previousPath
+            outcome.leftBehindCount = count
         }
 
         defaults.set(newDir, forKey: StorageService.storageDirectoryKey)
         storagePath = newPath
         startFileWatcher()
-        try load()
-        return backupPath
+        do {
+            try load()
+        } catch {
+            outcome.loadError = error
+        }
+        return outcome
     }
 
-    /// 저장 위치를 기본 폴더로 되돌린다.
+    /// 현재 계정을 대상 위치에 놓는다. 반환값은 밀려난 기존 파일의 백업 경로(없으면 nil).
     ///
-    /// 포인터만 옮기지 않고 `changePath`를 그대로 탄다. 예전엔 경로만 바꿔서, iCloud를 쓰던
-    /// 사용자가 이 버튼을 누르면 빈 폴더를 가리키며 계정이 전부 사라진 것처럼 보였다 —
-    /// 이 브랜치가 없애려던 바로 그 증상이다. UserDefaults 키는 지우지 않는다(지우면 다음
-    /// 실행에 온보딩이 다시 뜬다) — `changePath`가 기본 폴더를 명시적으로 써 넣는다.
-    @discardableResult
-    func resetToDefaultPath(strategy: PathChangeStrategy) throws -> String? {
-        try changePath(to: "\(defaultDirectory)/accounts.json", strategy: strategy)
+    /// 순서가 핵심이다 — 임시 이름으로 **먼저** 만들고, 그게 성공한 뒤에야 기존 파일을 백업으로
+    /// 밀고, 마지막에 임시를 최종 이름으로 올린다. 어느 단계에서 실패해도 대상 폴더에는 항상
+    /// 살아 있는 `accounts.json`이 남는다. 백업부터 하면 복사가 실패했을 때 대상에 `.bak-*`만
+    /// 남는데, 대상이 iCloud면 다른 Mac의 FileWatcher가 그 삭제를 보고 즉시 계정 0개가 된다.
+    private func materializeCurrentAccounts(at newPath: String) throws -> String? {
+        let fm = FileManager.default
+        let staging = "\(newPath).incoming-\(UUID().uuidString.prefix(8))"
+
+        if fm.fileExists(atPath: storagePath) {
+            try fm.copyItem(atPath: storagePath, toPath: staging)
+            // copyItem은 원본 권한을 그대로 가져온다. 새로 만들어진 파일이므로,
+            // 원본이 느슨했더라도 여기서 잠근다.
+            StorageService.restrictPermissions(staging, to: StorageService.filePermissions)
+        } else {
+            // 현재 파일이 외부에서 사라졌어도 메모리의 계정은 살아 있다. "현재 계정으로
+            // 덮어쓰기"를 고른 사용자에게는 그 계정이 실제로 새 위치에 놓여야 한다.
+            try StorageService.writeLocked(try encodedSnapshot(), to: staging)
+        }
+
+        var backupPath: String?
+        do {
+            backupPath = try StorageService.backupIfPresent(newPath)
+            try fm.moveItem(atPath: staging, toPath: newPath)
+        } catch {
+            // 백업까지 마치고 마지막 rename에서 실패하면 대상에 살아 있는 파일이 없다.
+            // 백업을 제자리로 되돌려 놓고 던진다.
+            if let backupPath, !fm.fileExists(atPath: newPath) {
+                try? fm.moveItem(atPath: backupPath, toPath: newPath)
+            }
+            try? fm.removeItem(atPath: staging)
+            throw error
+        }
+        return backupPath
     }
 
     // MARK: - Initial location commit
@@ -268,38 +338,28 @@ final class StorageService {
         nextId = storage.nextId
     }
 
-    private func save() throws {
+    /// 메모리의 계정을 디스크 포맷으로 직렬화한다.
+    private func encodedSnapshot() throws -> Data {
         let storage = AccountStorage(version: "1.0", nextId: nextId, accounts: accounts)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted]
-        let data = try encoder.encode(storage)
+        return try encoder.encode(storage)
+    }
 
-        let fm = FileManager.default
+    private func save() throws {
+        let data = try encodedSnapshot()
+
         let dir = URL(fileURLWithPath: storagePath).deletingLastPathComponent().path
         try StorageService.createDirectory(dir)
 
-        // 시크릿이 한 순간도 느슨한 권한으로 디스크에 존재하면 안 된다. 그래서 빈 파일을
-        // 0600으로 먼저 만들고 거기에 덮어쓴다 — 비원자적 write는 inode와 권한을 유지하므로
-        // 내용이 들어가는 시점엔 이미 잠겨 있다. (Data.write는 권한을 지정할 수 없어서
-        // 그냥 쓰면 umask대로 보통 0644가 된다.)
         let tempPath = storagePath + ".tmp"
-        let createdLocked = fm.createFile(
-            atPath: tempPath,
-            contents: nil,
-            attributes: [.posixPermissions: StorageService.filePermissions]
-        )
-        try data.write(to: URL(fileURLWithPath: tempPath))
-        if !createdLocked {
-            // 권한을 지정해 만들지 못한 경우(권한을 지원하지 않는 파일시스템 등)라도
-            // 뒤늦게나마 잠가 본다. 실패해도 저장은 계속한다.
-            StorageService.restrictPermissions(tempPath, to: StorageService.filePermissions)
-        }
+        try StorageService.writeLocked(data, to: tempPath)
 
         // replaceItemAt은 대상이 이미 있으면 그 파일의 권한을 보존한다 — 사용자가 의도적으로
         // 조정했을 수 있으므로 앱이 임의로 바꾸지 않는다. 대상이 없을 때만 임시 파일의
         // 0600이 그대로 새 파일의 권한이 된다.
-        _ = try fm.replaceItemAt(
+        _ = try FileManager.default.replaceItemAt(
             URL(fileURLWithPath: storagePath),
             withItemAt: URL(fileURLWithPath: tempPath)
         )
