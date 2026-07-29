@@ -526,6 +526,36 @@ final class StorageServiceTests: XCTestCase {
         XCTAssertEqual(service.storagePath, tempPath)
     }
 
+    /// 임시 파일을 만든 **뒤** 실패해도 그게 남으면 안 된다 — 내용이 평문 TOTP 시크릿이고,
+    /// 대상이 iCloud면 아무도 정리하지 않는 채 영원히 동기화된다.
+    ///
+    /// 실패를 이 지점에 정확히 주입하려고 대상 파일에 immutable 플래그(`uchg`)를 건다.
+    /// 디렉터리는 쓸 수 있으니 임시 파일 생성은 성공하고, 그다음 백업 rename만 EPERM으로
+    /// 실패한다. 디렉터리 권한으로 막으면 생성 자체가 실패해 이 경로를 못 덮는다.
+    func test_changePath_removesStagingFileWhenALaterStepFails() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+        let target = "\(targetDir)/accounts.json"
+        try writeStorage(at: target, issuer: "TargetService")
+        try writeStorage(at: tempPath, issuer: "CurrentService")
+
+        let fm = FileManager.default
+        try fm.setAttributes([.immutable: true], ofItemAtPath: target)
+        addTeardownBlock {
+            try? fm.setAttributes([.immutable: false], ofItemAtPath: target)
+        }
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        try service.load()
+
+        XCTAssertThrowsError(try service.changePath(to: target, strategy: .copyCurrent))
+
+        // 임시 파일도, 백업도 남지 않았고 대상 파일은 그대로다.
+        XCTAssertEqual(try fm.contentsOfDirectory(atPath: targetDir), ["accounts.json"])
+        XCTAssertEqual(StorageService.inspectFile(at: target), .accounts(count: 1))
+        XCTAssertEqual(service.storagePath, tempPath)
+    }
+
     /// 성공 경로에서도 임시 파일이 남으면 안 된다.
     func test_changePath_leavesNoStagingFile() throws {
         let defaults = makeDefaults()

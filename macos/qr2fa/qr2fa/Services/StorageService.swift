@@ -239,6 +239,11 @@ final class StorageService {
     private func materializeCurrentAccounts(at newPath: String) throws -> String? {
         let fm = FileManager.default
         let staging = "\(newPath).incoming-\(UUID().uuidString.prefix(8))"
+        // 임시 파일 내용은 평문 TOTP 시크릿이다. 쓰기 도중에 실패하면(디스크 풀, 중단)
+        // 부분적으로 쓰인 파일이 남고, 대상이 iCloud면 그게 영원히 동기화된다. 경로를
+        // 정한 시점에 정리를 예약해 어느 경로로 빠져나가든 남지 않게 한다. 성공 경로에서는
+        // 이미 최종 이름으로 rename된 뒤라 지울 게 없다.
+        defer { try? fm.removeItem(atPath: staging) }
 
         if fm.fileExists(atPath: storagePath) {
             try fm.copyItem(atPath: storagePath, toPath: staging)
@@ -261,7 +266,6 @@ final class StorageService {
             if let backupPath, !fm.fileExists(atPath: newPath) {
                 try? fm.moveItem(atPath: backupPath, toPath: newPath)
             }
-            try? fm.removeItem(atPath: staging)
             throw error
         }
         return backupPath
