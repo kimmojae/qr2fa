@@ -121,4 +121,58 @@ final class StorageServiceTests: XCTestCase {
         )
         XCTAssertThrowsError(try service.update(nonexistent))
     }
+
+    // MARK: - Location resolution
+
+    /// UserDefaults.standard를 오염시키지 않도록 테스트마다 별도 suite를 쓴다.
+    private func makeDefaults() -> UserDefaults {
+        let suite = UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        addTeardownBlock { UserDefaults().removePersistentDomain(forName: suite) }
+        return defaults
+    }
+
+    func test_needsLocationChoice_trueWhenKeyAbsent() {
+        let defaults = makeDefaults()
+        let service = StorageService(path: tempPath, defaults: defaults)
+        XCTAssertTrue(service.needsLocationChoice)
+    }
+
+    func test_needsLocationChoice_trueWhenKeyEmpty() {
+        let defaults = makeDefaults()
+        defaults.set("", forKey: StorageService.storageDirectoryKey)
+        let service = StorageService(path: tempPath, defaults: defaults)
+        XCTAssertTrue(service.needsLocationChoice)
+    }
+
+    func test_needsLocationChoice_falseWhenKeyPresent() {
+        let defaults = makeDefaults()
+        defaults.set("/tmp/whatever", forKey: StorageService.storageDirectoryKey)
+        let service = StorageService(path: tempPath, defaults: defaults)
+        XCTAssertFalse(service.needsLocationChoice)
+    }
+
+    func test_resolveDefaultPath_usesStoredDirectory() {
+        let defaults = makeDefaults()
+        defaults.set("/tmp/qr2fa-test", forKey: StorageService.storageDirectoryKey)
+        XCTAssertEqual(
+            StorageService.resolveDefaultPath(defaults: defaults),
+            "/tmp/qr2fa-test/accounts.json"
+        )
+    }
+
+    /// 이번 변경의 핵심 회귀 방지 — iCloud Drive 폴더가 실제로 존재하는 Mac에서도
+    /// 저장된 선택이 없으면 iCloud를 고르지 않고 로컬 기본값으로 떨어져야 한다.
+    func test_resolveDefaultPath_neverInfersICloud() {
+        let defaults = makeDefaults()
+        XCTAssertEqual(
+            StorageService.resolveDefaultPath(defaults: defaults),
+            "\(StorageService.localDefaultDirectory())/accounts.json"
+        )
+    }
+
+    func test_localDefaultDirectory_isConfigQr2fa() {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        XCTAssertEqual(StorageService.localDefaultDirectory(), "\(home)/.config/qr2fa")
+    }
 }

@@ -4,13 +4,18 @@ import Observation
 @Observable
 final class StorageService {
 
+    /// 사용자가 고른 저장 폴더의 절대 경로. 키가 없으면 아직 고르지 않은 것(= 온보딩 미완료).
+    static let storageDirectoryKey = "storageDirectory"
+
     private(set) var accounts: [Account] = []
     private var nextId: Int = 0
     private(set) var storagePath: String
     private var fileWatcher: FileWatcher?
+    private let defaults: UserDefaults
 
-    init(path: String? = nil) {
-        self.storagePath = path ?? StorageService.resolveDefaultPath()
+    init(path: String? = nil, defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        self.storagePath = path ?? StorageService.resolveDefaultPath(defaults: defaults)
         startFileWatcher()
     }
 
@@ -20,14 +25,49 @@ final class StorageService {
         }
     }
 
+    // MARK: - Location choice
+
+    /// 동기화를 쓰지 않을 때의 기본 폴더.
+    static func localDefaultDirectory() -> String {
+        "\(FileManager.default.homeDirectoryForCurrentUser.path)/.config/qr2fa"
+    }
+
+    /// iCloud Drive를 쓸 수 없는 Mac에서는 nil.
+    static func iCloudDirectory() -> String? {
+        let base = "\(FileManager.default.homeDirectoryForCurrentUser.path)"
+            + "/Library/Mobile Documents/com~apple~CloudDocs"
+        guard FileManager.default.fileExists(atPath: base) else { return nil }
+        return "\(base)/.qr2fa"
+    }
+
+    /// 빈 문자열은 유효한 선택으로 보지 않는다 — 그대로 쓰면 루트에 쓰려다 실패한다.
+    static func storedDirectory(defaults: UserDefaults) -> String? {
+        let value = defaults.string(forKey: storageDirectoryKey) ?? ""
+        return value.isEmpty ? nil : value
+    }
+
+    /// 저장된 선택이 있으면 그것, 없으면 로컬 기본값. iCloud Drive 존재 여부는 보지 않는다 —
+    /// 예전엔 여기서 자동 추론을 했는데, iCloud를 나중에 켜면 경로가 조용히 바뀌면서
+    /// 계정이 전부 사라진 것처럼 보이는 문제가 있었다.
+    static func resolveDefaultPath(defaults: UserDefaults = .standard) -> String {
+        let dir = storedDirectory(defaults: defaults) ?? localDefaultDirectory()
+        return "\(dir)/accounts.json"
+    }
+
+    var needsLocationChoice: Bool {
+        StorageService.storedDirectory(defaults: defaults) == nil
+    }
+
     var isDefaultPath: Bool {
-        storagePath == StorageService.resolveDefaultPath()
+        storagePath == "\(StorageService.localDefaultDirectory())/accounts.json"
     }
 
     func resetToDefaultPath() throws {
-        let configPath = "\(FileManager.default.homeDirectoryForCurrentUser.path)/.config/qr2fa/config.json"
-        try? FileManager.default.removeItem(atPath: configPath)
-        storagePath = StorageService.resolveDefaultPath()
+        // 키를 지우지 않고 기본 폴더를 명시적으로 써 넣는다. 지우면 "기본값으로 복원"을
+        // 눌렀을 뿐인데 다음 실행에 온보딩이 다시 뜬다.
+        let dir = StorageService.localDefaultDirectory()
+        defaults.set(dir, forKey: StorageService.storageDirectoryKey)
+        storagePath = "\(dir)/accounts.json"
         startFileWatcher()
         try load()
     }
@@ -46,20 +86,10 @@ final class StorageService {
             try fm.copyItem(atPath: storagePath, toPath: newPath)
         }
 
-        try writeConfigDataDir(newDir)
+        defaults.set(newDir, forKey: StorageService.storageDirectoryKey)
         storagePath = newPath
         startFileWatcher()
         try load()
-    }
-
-    private func writeConfigDataDir(_ dataDir: String) throws {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let configDir = "\(home)/.config/qr2fa"
-        try FileManager.default.createDirectory(atPath: configDir, withIntermediateDirectories: true)
-        let configPath = "\(configDir)/config.json"
-        let json: [String: String] = ["data_dir": dataDir]
-        let data = try JSONSerialization.data(withJSONObject: json, options: .prettyPrinted)
-        try data.write(to: URL(fileURLWithPath: configPath))
     }
 
     // MARK: - Load / Save
@@ -119,35 +149,7 @@ final class StorageService {
         try save()
     }
 
-    // MARK: - Path resolution (mirrors Go CLI priority)
-
-    static func resolveDefaultPath() -> String {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-
-        // 1. Config file: ~/.config/qr2fa/config.json → data_dir
-        let configPath = "\(home)/.config/qr2fa/config.json"
-        if let data = try? Data(contentsOf: URL(fileURLWithPath: configPath)),
-           let config = try? JSONDecoder().decode(CLIConfig.self, from: data),
-           !config.dataDir.isEmpty {
-            return "\(config.dataDir)/accounts.json"
-        }
-
-        // 2. iCloud Drive
-        let iCloud = "\(home)/Library/Mobile Documents/com~apple~CloudDocs"
-        if FileManager.default.fileExists(atPath: iCloud) {
-            return "\(iCloud)/.qr2fa/accounts.json"
-        }
-
-        // 3. Home directory fallback
-        return "\(home)/.qr2fa/accounts.json"
-    }
-
     // MARK: - Private helpers
-
-    private struct CLIConfig: Codable {
-        let dataDir: String
-        enum CodingKeys: String, CodingKey { case dataDir = "data_dir" }
-    }
 
     private static func decodeDateStrategy(_ decoder: Decoder) throws -> Date {
         let c = try decoder.singleValueContainer()
