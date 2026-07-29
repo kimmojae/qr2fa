@@ -3,209 +3,121 @@
 
   # Qr2fa
 
-  터미널에서 사용하는 TOTP MFA 인증 관리 도구. QR 캡처와 Google Authenticator 마이그레이션 지원.
+  macOS 메뉴바에서 쓰는 TOTP MFA 인증 관리 앱. 화면 QR 캡처와 Google Authenticator 마이그레이션 지원.
 </div>
 
-## Repository Structure
-
-- `cli/` — Go CLI (qr2fa 터미널 도구)
-- `macos/` — Swift macOS 메뉴바 앱
-
-## macOS 메뉴바 앱
-
-Qr2fa macOS 메뉴바 앱은 동일한 `accounts.json`을 공유하는 네이티브 macOS 앱입니다.
-
-### 설치
+## 설치
 
 1. [Releases](https://github.com/kimmojae/qr2fa/releases)에서 `qr2fa-macos.zip` 다운로드
 2. `qr2fa.app`을 `/Applications`로 이동
 3. 처음 실행 시 Gatekeeper 경고가 뜨면: Finder에서 `qr2fa.app` 우클릭 → **열기** → **열기**
-4. 화면 녹화 권한 요청 시 허용 (QR 스캔에 필요)
+4. 화면 녹화 권한 요청 시 허용 (QR 캡처에 필요)
 
-### 기능
+첫 실행 때 MFA 데이터를 어디에 저장할지 한 번 물어봅니다. iCloud Drive를 고르면 다른 Mac에서도 같은 계정이 그대로 보입니다.
 
-- 메뉴바 아이콘 클릭 → TOTP 코드 확인 및 클립보드 복사
-- 태그별 그룹, 실시간 30초 갱신 타이머
-- 계정 추가/편집/삭제, QR 코드 스캔 (ScreenCaptureKit)
-- CLI로 변경 시 자동 리로드
+## 기능
 
-## 주요 기능
-
-- 🎨 **Interactive TUI** - 실시간 코드 갱신, 폴더 뷰, 검색
-- 📸 **QR 캡처** - 화면에서 직접 QR 코드 캡처 (macOS)
-- 🔄 **Google Authenticator 마이그레이션** - 한 번에 여러 계정 가져오기
-- 📂 **유연한 저장 경로** - iCloud Drive, Dropbox 등 원하는 경로 지정
-- ⚡ **빠른 접근** - 번호 기반 조회 & 클립보드 자동 복사
-- 🏷️ **태그 관리** - dev/prod 등 환경별 분류
-
-## 설치
-
-```bash
-# Go로 설치
-go install github.com/kimmojae/qr2fa@latest
-
-# 소스에서 빌드
-git clone https://github.com/kimmojae/qr2fa
-cd qr2fa
-make build
-make install
-```
+- **메뉴바에서 바로** — 아이콘 클릭 → 서비스별 코드 확인 및 클립보드 복사, 30초 갱신 타이머
+- **화면 QR 캡처** — 화면에 뜬 QR을 마우스로 영역 선택해 그대로 등록 (ScreenCaptureKit + Vision)
+- **Google Authenticator 마이그레이션** — 내보내기 QR 하나로 여러 계정 한 번에 가져오기
+- **계정 관리** — 추가·편집·삭제, 태그로 dev/prod 분류, 서비스별 그룹
+- **유연한 저장 위치** — iCloud Drive, 로컬, Dropbox 등 원하는 폴더
+- **외부 변경 자동 반영** — 다른 Mac에서 iCloud로 동기화된 변경을 재시작 없이 반영
+- **로그인 시 자동 시작** (설정 > 일반)
 
 ## 사용법
 
-### 대화형 모드 (추천)
+**코드 확인** — 메뉴바 아이콘 클릭 → 서비스 → 계정. 클릭하면 코드가 클립보드로 복사됩니다.
 
-```bash
-qr2fa  # TUI 실행
+**계정 추가** — 메뉴바 → Settings… → 오른쪽 위 `+`
 
-# 키바인딩
-# ↑/↓ 또는 j/k: 이동
-# Enter/Space: 폴더 열기 / 클립보드 복사
-# Tab: 뷰 전환 (Folder → Group → Flat)
-# 타이핑: 실시간 검색
-# q: 종료
-```
+- **QR 캡처**: 화면에 QR을 띄워두고 영역을 드래그하면 자동 인식. Google Authenticator 내보내기 QR이면 여러 계정이 한 번에 들어옵니다.
+- **수동 입력**: 시크릿 키를 직접 붙여넣기
 
-### 주요 명령어
+**계정 편집·삭제** — 설정 창에서 계정 선택 → `편집`
 
-계정은 고유 번호(`#1`, `#2`, ...)로 관리됩니다. `qr2fa list`에서 번호를 확인하세요.
+## 저장 위치
 
-```bash
-# 계정 목록
-qr2fa list
-qr2fa list --tag prod
+MFA 데이터는 `accounts.json` 한 파일에 담깁니다. 위치는 첫 실행 때 고르고, 이후 **설정 > 일반**에서 바꿀 수 있습니다.
 
-# 코드 조회 & 복사 (번호로)
-qr2fa get 1
+| 선택 | 경로 |
+|---|---|
+| iCloud Drive | `~/Library/Mobile Documents/com~apple~CloudDocs/.qr2fa` |
+| 이 Mac에만 저장 | `~/.config/qr2fa` |
+| 직접 선택 | 원하는 폴더 (Dropbox, 외장 디스크 등) |
 
-# 계정 추가
-qr2fa add                              # 대화형
-qr2fa add --qr ~/Downloads/qr.png      # QR 이미지
-qr2fa qr-capture                       # 화면 캡처 ⭐
+고른 위치는 Mac마다 따로 기억되므로, iCloud로 데이터를 공유하면서도 특정 Mac만 다른 폴더를 보게 할 수 있습니다.
 
-# 계정 관리
-qr2fa show 1                           # 상세 정보 + QR 코드
-qr2fa edit 1                           # 태그 편집
-qr2fa rename 1 "new-name"              # 이름 변경
-qr2fa delete 1                         # 삭제
-
-# 백업/복원
-qr2fa export backup.json
-qr2fa import backup.json
-
-# 설정 관리
-qr2fa config show                      # 현재 설정 보기
-qr2fa config set-path                  # 저장 경로 변경
-qr2fa config set-path ~/Dropbox/.qr2fa # 직접 지정
-qr2fa config reset                     # 설정 초기화
-```
-
-### QR 화면 캡처
-
-Google Authenticator 내보내기를 포함한 모든 QR 코드를 화면에서 직접 캡처:
-
-```bash
-qr2fa qr-capture
-# 1. 화면에 QR 코드 표시
-# 2. 마우스로 영역 선택
-# 3. 자동으로 계정 추가 (다중 계정 자동 감지)
-```
-
-## 저장 경로 설정
-
-### 첫 실행 시 자동 설정
-
-처음 qr2fa를 실행하면 저장 경로를 선택하는 프롬프트가 나타납니다:
-
-```bash
-$ qr2fa list
-
-⚠️  저장 경로가 설정되지 않았습니다.
-
-데이터 저장 위치를 선택하세요:
-
-1. iCloud Drive [추천]
-   ~/Library/Mobile Documents/com~apple~CloudDocs/.qr2fa
-   Mac 간 자동 동기화
-
-2. 직접 입력
-   사용자 지정 경로 입력
-
-선택 (1-2) [1]: 1
-✓ 설정 저장 완료
-```
-
-### 저장 경로 변경
-
-```bash
-# 대화형으로 변경
-qr2fa config set-path
-
-# 직접 지정
-qr2fa config set-path ~/Dropbox/.qr2fa
-
-# 현재 설정 확인
-qr2fa config show
-
-# 설정 초기화 (다음 실행 시 다시 선택)
-qr2fa config reset
-```
-
-### 우선순위
-
-저장 위치는 다음 우선순위로 결정됩니다:
-
-1. **`--data-dir` 플래그** (일회성 오버라이드)
-
-   ```bash
-   qr2fa --data-dir ~/Dropbox/.qr2fa list
-   ```
-
-2. **`MFA_DATA_DIR` 환경변수** (세션별 오버라이드)
-
-   ```bash
-   export MFA_DATA_DIR=~/Dropbox/.qr2fa
-   qr2fa list
-   ```
-
-3. **설정 파일** (`~/.config/qr2fa/config.json`)
-   - 첫 실행 시 선택하거나 `qr2fa config set-path`로 설정
-
-4. **프롬프트** (설정이 없을 경우)
+**위치를 옮길 때** — 설정 > 일반 > `변경…`으로 새 폴더를 고르면 기존 데이터를 가져갑니다. `Finder에서 보기`로 실제 파일 위치를 열 수 있습니다.
 
 ## 보안
 
-- 파일 권한: `0600` (소유자만 읽기/쓰기)
-- 시크릿은 평문 JSON으로 저장 (편의성 우선)
-- FileVault + iCloud 암호화로 보호
-- Apple ID 2FA 활성화 권장
+- 시크릿은 **평문 JSON**으로 저장됩니다 (편의성 우선). 파일 자체가 곧 인증 수단입니다.
+- 앱이 만드는 저장 파일은 소유자만 읽고 쓸 수 있게(`0600`) 잠급니다.
+- iCloud Drive에 두면 Apple의 전송·저장 암호화가 적용됩니다.
 
-⚠️ **중요**: 시크릿이 평문으로 저장되므로 디스크 암호화(FileVault)와 강력한 로그인 비밀번호 필수
+> ⚠️ **디스크 암호화(FileVault)와 강력한 로그인 비밀번호가 필수입니다.** 이 파일을 통째로 복사당하면 모든 2FA가 뚫립니다. iCloud를 쓴다면 Apple ID의 2단계 인증도 반드시 켜두세요.
 
 ## 개발
 
 ```bash
-make build     # 빌드
-make test      # 테스트
-make release   # 멀티 플랫폼 빌드
-make proto     # protobuf 재생성
+cd macos
+make build      # Release 빌드 (build.noindex/)
+make install    # 빌드 → 자체 서명 → /Applications 교체 → 재실행
+make zip        # 릴리스용 아카이브
+make clean
 ```
 
-**프로젝트 구조:**
+테스트 (`macos/qr2fa/`에서):
 
-- `cmd/` - CLI 명령어 (Cobra)
-- `internal/account/` - 데이터 모델
-- `internal/storage/` - JSON 저장
-- `internal/totp/` - TOTP 생성
-- `internal/qr/` - QR 인코딩/디코딩
-- `internal/tui/` - Bubbletea UI
-- `internal/migration/` - Google Auth 마이그레이션
+```bash
+xcodebuild test -project qr2fa.xcodeproj -scheme qr2fa -destination 'platform=macOS'
+```
 
-## 호환성
+Xcode 프로젝트는 [XcodeGen](https://github.com/yonaskolb/XcodeGen)이 `macos/qr2fa/project.yml`에서 생성합니다. Swift 파일을 손으로 추가했다면 `xcodegen generate`를 다시 돌려야 빌드 타깃에 포함됩니다.
 
-- **macOS**: 전체 지원 (QR 캡처 포함)
-- **Linux**: 지원 (QR 캡처 제외)
-- **Windows**: 미테스트
+**구조**
+
+- `App/` — `AppDelegate`(메뉴바 `NSStatusItem`), `qr2faApp`(SwiftUI 씬)
+- `Models/` — `Account`, `AccountStorage`
+- `Services/` — `StorageService`(저장·경로), `TOTPGenerator`(RFC 6238), `MigrationParser`, `FileWatcher`
+- `Views/` — 온보딩, 설정 창, 계정 상세, QR 캡처
+
+---
+
+## Go CLI (deprecated)
+
+> **이 CLI는 더 이상 유지보수하지 않습니다.** 코드는 참고용으로 저장소에 남아 있지만 릴리스에 포함되지 않으며, 새로운 기능은 macOS 앱에만 추가됩니다.
+>
+> **앱과 저장 위치 설정을 공유하지 않습니다.** 앱은 고른 폴더를 자체 설정에 기억하고, CLI는 `~/.config/qr2fa/config.json`을 봅니다. 둘 다 쓰려면 양쪽이 같은 폴더를 가리키는지 직접 확인하세요 — 그러지 않으면 서로 다른 `accounts.json`을 보게 됩니다. `accounts.json` 형식 자체는 동일합니다.
+
+<details>
+<summary>사용법 펼치기</summary>
+
+```bash
+cd cli
+make build && make install
+```
+
+```bash
+qr2fa                                  # 대화형 TUI
+qr2fa list                             # 계정 목록
+qr2fa get 1                            # 코드 조회 & 복사
+qr2fa add                              # 계정 추가 (대화형)
+qr2fa add --qr ~/Downloads/qr.png      # QR 이미지에서 추가
+qr2fa qr-capture                       # 화면 캡처 (macOS 전용)
+qr2fa show 1                           # 상세 정보 + QR 코드
+qr2fa edit 1 / rename 1 "name" / delete 1
+qr2fa export backup.json               # 평문 JSON 백업
+qr2fa import backup.json
+qr2fa config show / set-path / reset   # 저장 경로
+```
+
+저장 경로 우선순위: `--data-dir` 플래그 > `MFA_DATA_DIR` 환경변수 > `~/.config/qr2fa/config.json` > 첫 실행 프롬프트.
+
+CLI가 만드는 파일은 `0600`, 디렉터리는 `0700`입니다. macOS 외 플랫폼에서는 QR 화면 캡처를 쓸 수 없습니다.
+
+</details>
 
 ## 라이선스
 
