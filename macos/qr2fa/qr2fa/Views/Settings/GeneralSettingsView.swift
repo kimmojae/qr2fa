@@ -5,8 +5,6 @@ struct GeneralSettingsView: View {
     @Environment(StorageService.self) private var storageService
     @State private var startAtLogin = SMAppService.mainApp.status == .enabled
     @State private var showingLocationInfo = false
-    /// 취소된 선택을 되돌리려고 Picker를 강제로 다시 그리는 카운터. `locationBinding` 참고.
-    @State private var pickerRevision = 0
 
     var body: some View {
         Form {
@@ -42,20 +40,8 @@ struct GeneralSettingsView: View {
                         }
                     }
                 }
-                // 온보딩과 같은 세 선택지. 폴더 패널만 두면 앱의 기본 iCloud 위치가
-                // 숨김 폴더라 사용자가 그리로 돌아갈 방법이 없다.
-                StorageLocationPicker(
-                    selection: locationBinding,
-                    iCloudAvailable: StorageService.iCloudDirectory() != nil
-                )
-                .id(pickerRevision)
-
                 HStack(spacing: 8) {
-                    // 이미 "직접 선택…"인 상태에서 다른 폴더로 바꿀 수 있는 유일한 통로 —
-                    // 선택이 이미 .custom이라 라디오를 다시 눌러도 setter가 안 걸린다.
-                    if currentChoice == .custom {
-                        Button("다른 폴더 선택…") { requestLocation(.custom) }
-                    }
+                    Button("변경…") { changeLocation() }
                     Button("Finder에서 보기") { revealInFinder() }
                 }
             }
@@ -117,48 +103,17 @@ struct GeneralSettingsView: View {
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: storageService.storagePath)])
     }
 
-    // MARK: - Location choice
+    // MARK: - Location change
 
-    private var currentDirectory: String {
-        URL(fileURLWithPath: storageService.storagePath).deletingLastPathComponent().path
-    }
-
-    private var currentChoice: StorageLocationChoice {
-        .matching(directory: currentDirectory, localDirectory: storageService.defaultDirectory)
-    }
-
-    /// 라디오는 상태를 따로 들지 않고 실제 저장 경로에서 파생시킨다 — 사용자가 확인
-    /// 대화상자를 취소하면 경로가 그대로라 선택도 저절로 되돌아온다. 다만 SwiftUI는 바인딩
-    /// 값이 안 바뀌면 Picker를 다시 그리지 않으므로, `pickerRevision`을 올려 강제로 되돌린다.
-    private var locationBinding: Binding<StorageLocationChoice> {
-        Binding(get: { currentChoice }, set: { requestLocation($0) })
-    }
-
-    private func requestLocation(_ choice: StorageLocationChoice) {
-        // SwiftUI의 상태 갱신 트랜잭션 도중 모달(NSOpenPanel/NSAlert)을 띄우면 아예 뜨지
-        // 않을 수 있어 다음 런루프 틱으로 미룬다.
-        switch choice {
-        case .iCloud:
-            DispatchQueue.main.async {
-                if let directory = StorageService.iCloudDirectory() {
-                    moveStorage(to: directory)
-                }
-                pickerRevision += 1
-            }
-        case .local:
-            DispatchQueue.main.async {
-                moveStorage(to: storageService.defaultDirectory)
-                pickerRevision += 1
-            }
-        case .custom:
-            presentDirectoryPicker { directory in
-                if let directory { moveStorage(to: directory) }
-                pickerRevision += 1
-            }
+    /// 저장 폴더를 직접 고른다. 앱의 기본 iCloud 위치(`.qr2fa`)는 숨김 폴더라
+    /// `presentDirectoryPicker`가 숨김 파일을 보이게 해 둔다.
+    private func changeLocation() {
+        presentDirectoryPicker { directory in
+            if let directory { moveStorage(to: directory) }
         }
     }
 
-    /// 저장 폴더를 옮기는 단일 통로. 세 선택지가 모두 같은 확인 절차를 탄다.
+    /// 저장 폴더를 옮기는 단일 통로.
     ///
     /// 대상 폴더에 다른 계정 파일이 있으면 조용히 덮어쓰지 않는다 — 어느 쪽을 정본으로 삼을지
     /// 반드시 사용자에게 묻는다. 여러 Mac에서 각자 계정을 등록한 뒤 iCloud로 합치는 건

@@ -78,6 +78,9 @@ func presentDirectoryPicker(completion: @escaping (String?) -> Void) {
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
         panel.prompt = "선택"
+        // 앱의 기본 iCloud 위치가 숨김 폴더(.qr2fa)라, 이걸 켜지 않으면 패널에서 그리로
+        // 돌아갈 방법이 없다. 실제로 그 때문에 iCloud Drive 최상위를 고르는 일이 있었다.
+        panel.showsHiddenFiles = true
         completion(panel.runModal() == .OK ? panel.url?.path : nil)
     }
 }
