@@ -23,19 +23,38 @@ private struct SettingsScene: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
     @State private var didBootstrap = false
+    @State private var needsOnboarding: Bool
+
+    init(appDelegate: AppDelegate) {
+        self.appDelegate = appDelegate
+        _needsOnboarding = State(initialValue: appDelegate.storageService.needsLocationChoice)
+    }
 
     var body: some View {
-        SettingsView()
-            .environment(appDelegate.storageService)
-            .frame(minWidth: 760, idealWidth: 960, minHeight: 440, idealHeight: 580)
-            .onAppear {
-                // openWindow 액션을 AppDelegate에 넘겨 메뉴바에서 창을 열 수 있게 한다.
-                appDelegate.presentSettings = { openWindow(id: Self.windowID) }
-                // Window 씬은 실행 시 자동으로 열리므로, 첫 등장 때는 숨겨 메뉴바 앱처럼 동작한다.
-                if !didBootstrap {
-                    didBootstrap = true
+        Group {
+            if needsOnboarding {
+                OnboardingView {
+                    needsOnboarding = false
+                    dismissWindow(id: Self.windowID)
+                }
+                .frame(width: 480, height: 420)
+            } else {
+                SettingsView()
+                    .frame(minWidth: 760, idealWidth: 960, minHeight: 440, idealHeight: 580)
+            }
+        }
+        .environment(appDelegate.storageService)
+        .onAppear {
+            // openWindow 액션을 AppDelegate에 넘겨 메뉴바에서 창을 열 수 있게 한다.
+            appDelegate.presentSettings = { openWindow(id: Self.windowID) }
+            // Window 씬은 실행 시 자동으로 열린다. 평소엔 숨겨 메뉴바 앱처럼 동작하지만,
+            // 온보딩이 필요하면 그대로 띄워둔다.
+            if !didBootstrap {
+                didBootstrap = true
+                if !needsOnboarding {
                     dismissWindow(id: Self.windowID)
                 }
             }
+        }
     }
 }

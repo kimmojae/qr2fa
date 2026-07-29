@@ -34,7 +34,7 @@ struct GeneralSettingsView: View {
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
                         .popover(isPresented: $showingLocationInfo) {
-                            Text("직접 고른 위치가 있으면 그 위치를 항상 우선 사용합니다. 고른 적이 없으면 iCloud Drive에 자동으로 저장하고, iCloud Drive를 쓸 수 없는 Mac에서는 홈 폴더(~/.qr2fa)에 저장합니다.")
+                            Text("MFA 데이터가 저장되는 폴더입니다. iCloud Drive를 고르면 다른 Mac과 자동으로 동기화됩니다. 이 설정은 Mac마다 따로 적용됩니다.")
                                 .frame(width: 260)
                                 .padding()
                         }
