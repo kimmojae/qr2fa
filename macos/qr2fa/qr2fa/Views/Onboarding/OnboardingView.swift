@@ -146,14 +146,45 @@ struct OnboardingView: View {
     private func commit() {
         guard let directory = selectedDirectory else { return }
         do {
-            try storageService.commitInitialLocation(directory: directory)
+            let outcome = try storageService.commitInitialLocation(directory: directory)
+            // 위치는 이미 고정됐다. 알릴 게 있어도 창은 닫는다 — 여기서 멈추면 다시 눌러도
+            // 같은 상태라 같은 경고가 무한 반복되고, 창을 강제로 닫는 것 말고 탈출구가 없다.
+            if outcome.hasNotice { showNotice(outcome) }
             onFinish()
         } catch {
+            // 위치 고정 자체가 실패한 경우에만 이 화면에 머문다(다시 시도할 여지가 있다).
             let alert = NSAlert()
             alert.messageText = "저장 위치를 설정할 수 없습니다"
             alert.informativeText = error.localizedDescription
             alert.alertStyle = .warning
             alert.runModal()
         }
+    }
+
+    /// 확정은 됐지만 사용자가 알아야 하는 것들 — 로드 실패, 그리고 이전 위치에 남은 계정.
+    private func showNotice(_ outcome: StorageService.CommitOutcome) {
+        var lines: [String] = []
+
+        if let path = outcome.leftBehindPath {
+            lines.append("""
+                선택한 폴더에 이미 계정 파일이 있어 그쪽을 그대로 씁니다.
+                이전 위치에 계정 \(outcome.leftBehindCount)개가 남아 있습니다:
+                \(abbreviate(path))
+                필요하면 Finder에서 직접 옮기세요 — 자동으로 지우지 않습니다.
+                """)
+        }
+        if let error = outcome.loadError {
+            lines.append("""
+                저장 위치의 파일을 읽지 못했습니다:
+                \(error.localizedDescription)
+                설정 > 일반에서 다른 위치를 고를 수 있습니다.
+                """)
+        }
+
+        let alert = NSAlert()
+        alert.messageText = "저장 위치를 설정했습니다"
+        alert.informativeText = lines.joined(separator: "\n\n")
+        alert.alertStyle = .warning
+        alert.runModal()
     }
 }

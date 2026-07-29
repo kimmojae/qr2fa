@@ -253,6 +253,55 @@ final class StorageServiceTests: XCTestCase {
         XCTAssertFalse(service.needsLocationChoice)
     }
 
+    /// 온보딩 창을 닫고 계정을 추가한 뒤, 이미 파일이 있는 폴더를 고른 경우 —
+    /// 임시 파일이 남는다는 사실을 결과로 알려야 한다(조용히 고아가 되면 안 된다).
+    func test_commitInitialLocation_reportsLeftBehindAccounts() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+        try writeStorage(at: "\(targetDir)/accounts.json", issuer: "TargetService")
+        try writeStorage(at: tempPath, issuer: "ProvisionalService")
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        let outcome = try service.commitInitialLocation(directory: targetDir)
+
+        XCTAssertTrue(outcome.hasNotice)
+        XCTAssertEqual(outcome.leftBehindPath, tempPath)
+        XCTAssertEqual(outcome.leftBehindCount, 1)
+        XCTAssertNil(outcome.loadError)
+    }
+
+    /// 정상 경로에서는 알릴 게 없어야 한다 — 매번 경고창이 뜨면 안 된다.
+    func test_commitInitialLocation_noNoticeOnCleanCommit() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+        try writeStorage(at: tempPath, issuer: "ProvisionalService")
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        let outcome = try service.commitInitialLocation(directory: targetDir)
+
+        XCTAssertFalse(outcome.hasNotice)
+        XCTAssertNil(outcome.leftBehindPath)
+    }
+
+    /// 대상 파일이 손상돼 로드가 실패해도 위치 확정은 성공으로 끝나야 한다.
+    /// 던져버리면 온보딩에서 같은 예외가 무한 반복되며 빠져나갈 수 없다.
+    func test_commitInitialLocation_commitsEvenWhenTargetUnreadable() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+        try "{ not json".write(
+            toFile: "\(targetDir)/accounts.json", atomically: true, encoding: .utf8
+        )
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        let outcome = try service.commitInitialLocation(directory: targetDir)
+
+        XCTAssertNotNil(outcome.loadError)
+        XCTAssertTrue(outcome.hasNotice)
+        // 선택은 영속화됐고 경로도 옮겨갔다 — 다시 시도할 게 아니라 창을 닫아야 하는 상태.
+        XCTAssertEqual(service.storagePath, "\(targetDir)/accounts.json")
+        XCTAssertFalse(service.needsLocationChoice)
+    }
+
     // MARK: - changePath
 
     /// 핵심 안전장치 — 대상 파일을 unlink하지 않는다. 이 앱의 데이터는 복구 불가능한 시크릿이다.

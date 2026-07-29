@@ -168,27 +168,59 @@ final class StorageService {
         try changePath(to: "\(defaultDirectory)/accounts.json", strategy: strategy)
     }
 
+    // MARK: - Initial location commit
+
+    /// `commitInitialLocation`의 결과. 위치 확정은 성공했지만 사용자에게 알려야 할 게 남은 경우를 담는다.
+    struct CommitOutcome {
+        /// 확정한 위치의 파일을 읽지 못했다. 위치는 이미 고정됐으므로 재시도는 의미가 없다.
+        var loadError: Error?
+        /// 대상에 이미 파일이 있어 옮기지 못하고 남겨둔 이전 위치.
+        var leftBehindPath: String?
+        var leftBehindCount: Int = 0
+
+        var hasNotice: Bool { loadError != nil || leftBehindPath != nil }
+    }
+
     /// 온보딩에서 고른 위치를 확정한다.
     ///
     /// `changePath(to:strategy:)`와 달리 대상 파일을 절대 덮어쓰지 않는다. 온보딩 창을 닫고 계정을
     /// 추가한 뒤 다음 실행에서 iCloud를 고르는 경우, 복사 방식이면 iCloud에 있던 계정이
     /// 임시 파일로 덮여 날아간다.
-    func commitInitialLocation(directory: String) throws {
+    ///
+    /// 던지는 건 "위치 고정 자체가 실패한" 경우뿐이다. 위치를 고정한 뒤의 로드 실패는
+    /// `CommitOutcome.loadError`로 돌려준다 — 선택은 이미 영속화됐으므로 호출 측은 경고만
+    /// 띄우고 온보딩을 닫아야 한다. 던지면 사용자가 같은 예외를 무한 반복하며 갇힌다.
+    @discardableResult
+    func commitInitialLocation(directory: String) throws -> CommitOutcome {
         let fm = FileManager.default
         let target = "\(directory)/accounts.json"
         try fm.createDirectory(atPath: directory, withIntermediateDirectories: true)
 
-        // 대상이 비어 있을 때만 임시 파일을 옮긴다. 대상에 이미 파일이 있으면 그쪽이 정본.
-        if !fm.fileExists(atPath: target),
-           storagePath != target,
-           fm.fileExists(atPath: storagePath) {
+        var outcome = CommitOutcome()
+        let targetExists = fm.fileExists(atPath: target)
+        let provisionalExists = storagePath != target && fm.fileExists(atPath: storagePath)
+
+        if !targetExists, provisionalExists {
+            // 대상이 비어 있을 때만 임시 파일을 옮긴다.
             try fm.moveItem(atPath: storagePath, toPath: target)
+        } else if targetExists, provisionalExists {
+            // 대상에 이미 파일이 있으면 그쪽이 정본이고 임시 파일은 그대로 남는다. 소실은
+            // 아니지만 그 계정들이 UI에서 사라지므로 조용히 넘어가면 안 된다.
+            if case .accounts(let count) = StorageService.inspectFile(at: storagePath), count > 0 {
+                outcome.leftBehindPath = storagePath
+                outcome.leftBehindCount = count
+            }
         }
 
         defaults.set(directory, forKey: StorageService.storageDirectoryKey)
         storagePath = target
         startFileWatcher()
-        try load()
+        do {
+            try load()
+        } catch {
+            outcome.loadError = error
+        }
+        return outcome
     }
 
     // MARK: - Load / Save
