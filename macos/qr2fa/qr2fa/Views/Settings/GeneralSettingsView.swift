@@ -135,31 +135,20 @@ struct GeneralSettingsView: View {
     /// 정상 사용 패턴이고, 그 순간 잘못 고르면 복구 불가능한 MFA 시크릿이 날아간다.
     private func moveStorage(to directory: String) {
         let target = "\(directory)/accounts.json"
-        guard target != storageService.storagePath else { return }
 
         let strategy: StorageService.PathChangeStrategy
-        switch StorageService.inspectTarget(directory: directory) {
-        case .absent:
-            // 대상이 비어 있으면 지금 계정을 그대로 데려간다. 잃을 게 없으니 묻지 않는다.
-            strategy = .copyCurrent
-
-        case .accounts(let count):
+        switch StorageLocationDecision.decide(
+            currentPath: storageService.storagePath, targetPath: target
+        ) {
+        case .noChange:
+            return
+        case .proceed(let decided):
+            strategy = decided
+        case .askWhichWins(let count):
             guard let choice = askWhichFileWins(directory: directory, targetCount: count) else { return }
             strategy = choice
-
-        case .unreadable:
-            let alert = NSAlert()
-            alert.messageText = "선택한 폴더에 읽을 수 없는 accounts.json이 있습니다"
-            alert.informativeText = """
-                \(abbreviate(target))
-
-                계속하면 그 파일을 accounts.json.bak-<시각>으로 백업한 뒤 현재 계정 \
-                \(storageService.accounts.count)개로 새로 씁니다.
-                """
-            alert.alertStyle = .warning
-            alert.addButton(withTitle: "백업 후 계속")
-            alert.addButton(withTitle: "취소")
-            guard alert.runModal() == .alertFirstButtonReturn else { return }
+        case .askOverwriteUnreadable:
+            guard confirmOverwriteUnreadable(target: target) else { return }
             strategy = .copyCurrent
         }
 
@@ -203,6 +192,22 @@ struct GeneralSettingsView: View {
         alert.runModal()
     }
 
+    private func confirmOverwriteUnreadable(target: String) -> Bool {
+        let alert = NSAlert()
+        alert.messageText = "선택한 폴더에 읽을 수 없는 accounts.json이 있습니다"
+        alert.informativeText = """
+            \(abbreviate(target))
+
+            계속하면 그 파일을 accounts.json.bak-<시각>으로 백업한 뒤 현재 계정 \
+            \(storageService.accounts.count)개로 새로 씁니다.
+            """
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "백업 후 계속")
+        alert.addButton(withTitle: "취소")
+        alert.buttons[1].keyEquivalent = "\u{1b}"
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
     /// 대상에 계정 파일이 있을 때 어느 쪽을 정본으로 삼을지 묻는다. 취소면 nil.
     private func askWhichFileWins(
         directory: String,
@@ -222,6 +227,8 @@ struct GeneralSettingsView: View {
         alert.addButton(withTitle: "그 폴더의 파일 사용")
         alert.addButton(withTitle: "현재 계정으로 덮어쓰기")
         alert.addButton(withTitle: "취소")
+        // 3버튼 알럿에서는 세 번째 버튼에 Esc가 자동으로 걸리지 않는다.
+        alert.buttons[2].keyEquivalent = "\u{1b}"
 
         switch alert.runModal() {
         case .alertFirstButtonReturn:  return .adoptTarget
