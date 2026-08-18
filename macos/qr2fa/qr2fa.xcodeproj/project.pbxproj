@@ -25,10 +25,11 @@
 		8ED0FFD516027E3C484C1644 /* TagBadgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33F56D427AB567C03D066E2E /* TagBadgeView.swift */; };
 		94201FB9B05FC82B3E2DD2C2 /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F18F2A75E8D589092F833454 /* GeneralSettingsView.swift */; };
 		9C05264088E598FCAC8E2579 /* PlaceholderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C1FA115DCA7679BDAA7781C /* PlaceholderTests.swift */; };
+		A2FA9D8DC44B2A368EE153B2 /* AppInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D7870034DCFEF7C7CE52261 /* AppInfo.swift */; };
 		A3EF3DE80D032D4A3F4A7FCA /* ScreenCaptureKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C0C1542EA75DD7AC6ED065A /* ScreenCaptureKit.framework */; };
 		AF409432B44BF07BDB5A9B04 /* AccountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70A129B0D600674D2913C90 /* AccountTests.swift */; };
+		C08CA2EF2820FF0A78F25B63 /* StorageLocationSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE7F2F57AE6BE17E4212AD3C /* StorageLocationSupport.swift */; };
 		CE6043988BF08494C558F41D /* qr2faApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E3780EDA60632058320D35C /* qr2faApp.swift */; };
-		D8410702459729C7AE2F18ED /* StorageLocationPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C62B56B24F68FCBD56F3D73 /* StorageLocationPicker.swift */; };
 		DF09CA7F06203CC0EE68C681 /* StorageLocationDecisionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05576E86F1D49A7E9498DD19 /* StorageLocationDecisionTests.swift */; };
 		DF4A30EE2A5DE5D37A3EC2A7 /* TOTPGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03F34D82B7A1BCF1EC6B7E15 /* TOTPGeneratorTests.swift */; };
 		EF6C5878EBC05F6906980FAC /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 41B2928875C704AF8919B743 /* AppIcon.icon */; };
@@ -51,6 +52,7 @@
 		05576E86F1D49A7E9498DD19 /* StorageLocationDecisionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageLocationDecisionTests.swift; sourceTree = "<group>"; };
 		0811B5A5C86579A6EB9AA6B5 /* MigrationParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationParser.swift; sourceTree = "<group>"; };
 		224EF6A8A2A51266EA1F4497 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		2D7870034DCFEF7C7CE52261 /* AppInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppInfo.swift; sourceTree = "<group>"; };
 		31B36FFCF5D8071F254BF6A0 /* StorageLocationDecision.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageLocationDecision.swift; sourceTree = "<group>"; };
 		33F56D427AB567C03D066E2E /* TagBadgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagBadgeView.swift; sourceTree = "<group>"; };
 		41B2928875C704AF8919B743 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
@@ -61,7 +63,6 @@
 		88408CF5542FBCAEF73C53B3 /* StorageServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageServiceTests.swift; sourceTree = "<group>"; };
 		8991D1C6B65A5866C508761B /* QRCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCaptureView.swift; sourceTree = "<group>"; };
 		8AB1D750F031A942255E35D2 /* AccountAddSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountAddSheet.swift; sourceTree = "<group>"; };
-		8C62B56B24F68FCBD56F3D73 /* StorageLocationPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageLocationPicker.swift; sourceTree = "<group>"; };
 		8E3780EDA60632058320D35C /* qr2faApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = qr2faApp.swift; sourceTree = "<group>"; };
 		9DD71DAB18DB4EE4D3E34774 /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Vision.framework; path = System/Library/Frameworks/Vision.framework; sourceTree = SDKROOT; };
 		AB705C1DD7C7B18A51F43252 /* FileWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcher.swift; sourceTree = "<group>"; };
@@ -69,6 +70,7 @@
 		C58CE58E6B1EF7F69F2209ED /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D48BA6FC6E5EEE8F9646710E /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
 		D93979A9D062AA2E1A03EDB8 /* TOTPGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TOTPGenerator.swift; sourceTree = "<group>"; };
+		DE7F2F57AE6BE17E4212AD3C /* StorageLocationSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageLocationSupport.swift; sourceTree = "<group>"; };
 		E51747644CDE502D030DE373 /* AccountDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDetailView.swift; sourceTree = "<group>"; };
 		E55E50489931E956CD012135 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		E70A129B0D600674D2913C90 /* AccountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTests.swift; sourceTree = "<group>"; };
@@ -99,7 +101,7 @@
 				E51747644CDE502D030DE373 /* AccountDetailView.swift */,
 				ED616089CB032DBD46721CF3 /* AccountMenuItemView.swift */,
 				8991D1C6B65A5866C508761B /* QRCaptureView.swift */,
-				8C62B56B24F68FCBD56F3D73 /* StorageLocationPicker.swift */,
+				DE7F2F57AE6BE17E4212AD3C /* StorageLocationSupport.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -181,6 +183,7 @@
 			isa = PBXGroup;
 			children = (
 				224EF6A8A2A51266EA1F4497 /* AppDelegate.swift */,
+				2D7870034DCFEF7C7CE52261 /* AppInfo.swift */,
 				8E3780EDA60632058320D35C /* qr2faApp.swift */,
 			);
 			path = App;
@@ -300,6 +303,7 @@
 				431D0751870D9150464587F1 /* AccountDetailView.swift in Sources */,
 				0CC3A6BA472527E06CC133D0 /* AccountMenuItemView.swift in Sources */,
 				FCF51A7378F98C134BBD1B5F /* AppDelegate.swift in Sources */,
+				A2FA9D8DC44B2A368EE153B2 /* AppInfo.swift in Sources */,
 				128B2AA2B01CF60772055C26 /* FileWatcher.swift in Sources */,
 				94201FB9B05FC82B3E2DD2C2 /* GeneralSettingsView.swift in Sources */,
 				2EA60BDF68A4B9EC16138E37 /* MigrationParser.swift in Sources */,
@@ -307,7 +311,7 @@
 				11A3598F5D47835AA6D56A2D /* QRCaptureView.swift in Sources */,
 				648AB564F78936D88854AE4E /* SettingsView.swift in Sources */,
 				7FE8CA66039854ED9C1164F3 /* StorageLocationDecision.swift in Sources */,
-				D8410702459729C7AE2F18ED /* StorageLocationPicker.swift in Sources */,
+				C08CA2EF2820FF0A78F25B63 /* StorageLocationSupport.swift in Sources */,
 				05D51B269ABE036A6F355C5E /* StorageService.swift in Sources */,
 				0F36F3866A221AA37520A4B8 /* TOTPGenerator.swift in Sources */,
 				8ED0FFD516027E3C484C1644 /* TagBadgeView.swift in Sources */,

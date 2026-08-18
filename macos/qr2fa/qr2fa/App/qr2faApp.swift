@@ -24,7 +24,7 @@ struct qr2faApp: App {
         // onAppear에 두면 그 onAppear 자체가 영영 실행되지 않아 배선이 죽는다 — 그래서
         // 이 배선은 항상 자동으로 열리는 OnboardingScene 쪽에 둔다.
         // 두 씬의 제목이 같으면 Window 메뉴에 구분되지 않는 항목이 둘 생긴다.
-        Window("저장 위치 선택", id: AppWindowID.onboarding) {
+        Window("Qr2fa 시작하기", id: AppWindowID.onboarding) {
             OnboardingScene(appDelegate: appDelegate)
         }
         .windowResizability(.contentSize)
@@ -53,7 +53,7 @@ private struct OnboardingScene: View {
             needsOnboarding = false
             dismissWindow(id: AppWindowID.onboarding)
         }
-        .frame(width: 480, height: 420)
+        .frame(width: 560, height: 270)
         .environment(appDelegate.storageService)
         .onAppear {
             // 이 씬은 실행 시 자동으로 열리는 유일한 Window 씬이다. 메뉴바에서 설정

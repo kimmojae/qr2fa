@@ -3,53 +3,56 @@ import SwiftUI
 
 /// 첫 실행 때 MFA 데이터 저장 위치를 고르는 화면.
 /// 저장 위치 하나만 묻는다 — 화면 기록 권한이나 기능 소개는 넣지 않는다.
+///
+/// 폴더 선택은 **옵션**이다. 고르지 않으면 이 Mac의 기본 폴더를 쓴다. 예전엔 iCloud Drive /
+/// 이 Mac / 직접 선택… 3지선다였는데, 셋 다 결국 "폴더 하나"였고 직접 선택이 나머지 둘을
+/// 포함해서 동급 선택지처럼 보이는 게 실제로 겹쳐 보였다. 동기화하고 싶은 사람은 그 폴더를
+/// (iCloud든 Dropbox든) 직접 고르면 된다.
 struct OnboardingView: View {
     @Environment(StorageService.self) private var storageService
 
     /// 확정에 성공했을 때 호출된다. 실패하면 호출하지 않고 이 화면에 머문다.
     let onFinish: () -> Void
 
-    // iCloud를 쓸 수 없는 Mac에서는 "이 Mac에만 저장"으로 시작한다.
-    @State private var choice: StorageLocationChoice =
-        StorageService.iCloudDirectory() == nil ? .local : .iCloud
+    /// nil이면 기본 폴더(이 Mac)를 쓴다.
     @State private var customDirectory: String?
 
-    private let iCloudDirectory = StorageService.iCloudDirectory()
-
-    private var selectedDirectory: String? {
-        switch choice {
-        case .iCloud: return iCloudDirectory
-        case .local:  return storageService.defaultDirectory
-        case .custom: return customDirectory
-        }
+    private var selectedDirectory: String {
+        customDirectory ?? storageService.defaultDirectory
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("MFA 데이터를 어디에 저장할까요?")
-                .font(.system(size: 16, weight: .semibold))
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
+            // 앱을 처음 보는 화면이라 아이콘과 이름을 함께 둔다 — 창 제목만으로는
+            // 어느 앱이 폴더를 묻는지 알기 어렵다.
+            HStack(spacing: 12) {
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .frame(width: 44, height: 44)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(appDisplayName)
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("MFA 데이터를 어디에 저장할까요?")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
 
             Form {
                 Section {
-                    StorageLocationPicker(
-                        selection: $choice,
-                        iCloudAvailable: iCloudDirectory != nil
-                    )
-                }
-
-                Section {
                     LabeledContent("저장 폴더") {
                         HStack(spacing: 8) {
-                            Text(selectedDirectory.map(abbreviateHome) ?? "선택되지 않음")
+                            Text(abbreviateHome(selectedDirectory))
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                                 .truncationMode(.middle)
-                            // 이미 custom인 상태에서 다른 폴더로 바꿀 수 있는 유일한 통로.
-                            // Picker 선택이 이미 .custom이라 onChange가 다시 안 걸린다.
-                            if choice == .custom {
-                                Button("변경…") { pickCustomDirectory() }
+                            Button(customDirectory == nil ? "선택…" : "변경…") {
+                                pickDirectory()
+                            }
+                            if customDirectory != nil {
+                                Button("기본값으로") { customDirectory = nil }
                             }
                         }
                     }
@@ -64,37 +67,23 @@ struct OnboardingView: View {
                 Spacer()
                 Button("시작하기") { commit() }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(selectedDirectory == nil)
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
-        }
-        .onChange(of: choice) { oldValue, newValue in
-            guard newValue == .custom else { return }
-            presentDirectoryPicker { directory in
-                if let directory {
-                    customDirectory = directory
-                } else {
-                    choice = oldValue   // 패널을 취소하면 직전 선택으로 되돌린다
-                }
-            }
         }
     }
 
     // MARK: - Actions
 
-    private func pickCustomDirectory() {
+    private func pickDirectory() {
         presentDirectoryPicker { directory in
-            if let directory {
-                customDirectory = directory
-            }
+            if let directory { customDirectory = directory }
         }
     }
 
     private func commit() {
-        guard let directory = selectedDirectory else { return }
         do {
-            let outcome = try storageService.commitInitialLocation(directory: directory)
+            let outcome = try storageService.commitInitialLocation(directory: selectedDirectory)
             // 위치는 이미 고정됐다. 알릴 게 있어도 창은 닫는다 — 여기서 멈추면 다시 눌러도
             // 같은 상태라 같은 경고가 무한 반복되고, 창을 강제로 닫는 것 말고 탈출구가 없다.
             if outcome.hasNotice { showNotice(outcome) }

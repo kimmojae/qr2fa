@@ -40,14 +40,6 @@ final class StorageService {
         "\(FileManager.default.homeDirectoryForCurrentUser.path)/.config/qr2fa"
     }
 
-    /// iCloud Drive를 쓸 수 없는 Mac에서는 nil.
-    static func iCloudDirectory() -> String? {
-        let base = "\(FileManager.default.homeDirectoryForCurrentUser.path)"
-            + "/Library/Mobile Documents/com~apple~CloudDocs"
-        guard FileManager.default.fileExists(atPath: base) else { return nil }
-        return "\(base)/.qr2fa"
-    }
-
     /// 빈 문자열은 유효한 선택으로 보지 않는다 — 그대로 쓰면 루트에 쓰려다 실패한다.
     static func storedDirectory(defaults: UserDefaults) -> String? {
         let value = defaults.string(forKey: storageDirectoryKey) ?? ""
