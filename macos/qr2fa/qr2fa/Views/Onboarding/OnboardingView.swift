@@ -77,7 +77,9 @@ struct OnboardingView: View {
 
     private func pickDirectory() {
         presentDirectoryPicker { directory in
-            if let directory { customDirectory = directory }
+            // 고른 폴더 그대로가 아니라 그 안의 데이터 폴더를 쓴다 — 확정 전에 화면에서
+            // 최종 경로를 볼 수 있어야 한다.
+            if let directory { customDirectory = StorageService.dataDirectory(inside: directory) }
         }
     }
 
@@ -98,14 +100,14 @@ struct OnboardingView: View {
         }
     }
 
-    /// 확정은 됐지만 사용자가 알아야 하는 것들 — 로드 실패, 그리고 이전 위치에 남은 계정.
+    /// 예정대로 되지 않은 것만 알린다 — 정상적으로 끝난 확정은 조용히 창을 닫는다.
     private func showNotice(_ outcome: StorageService.CommitOutcome) {
         var lines: [String] = []
 
         if let path = outcome.leftBehindPath {
             lines.append("""
                 선택한 폴더에 이미 계정 파일이 있어 그쪽을 그대로 씁니다.
-                이전 위치에 계정 \(outcome.leftBehindCount)개가 남아 있습니다:
+                여기까지 등록한 계정 \(outcome.leftBehindCount)개는 이전 위치에 남았습니다:
                 \(abbreviateHome(path))
                 필요하면 Finder에서 직접 옮기세요 — 자동으로 지우지 않습니다.
                 """)
@@ -117,9 +119,10 @@ struct OnboardingView: View {
                 설정 > 일반에서 다른 위치를 고를 수 있습니다.
                 """)
         }
+        guard !lines.isEmpty else { return }
 
         let alert = NSAlert()
-        alert.messageText = "저장 위치를 설정했습니다"
+        alert.messageText = "저장 위치는 설정했습니다"
         alert.informativeText = lines.joined(separator: "\n\n")
         alert.alertStyle = .warning
         alert.runModal()

@@ -97,7 +97,11 @@ struct GeneralSettingsView: View {
     /// `presentDirectoryPicker`가 숨김 파일을 보이게 해 둔다.
     private func changeLocation() {
         presentDirectoryPicker { directory in
-            if let directory { moveStorage(to: directory) }
+            // 고른 폴더 안의 데이터 폴더(.qr2fa)로 옮긴다 — 동기화 폴더 최상위에 시크릿
+            // 파일이 문서들 옆에 놓이지 않게 하는 건 사용자가 아니라 앱이 할 일이다.
+            if let directory {
+                moveStorage(to: StorageService.dataDirectory(inside: directory))
+            }
         }
     }
 
@@ -178,22 +182,17 @@ struct GeneralSettingsView: View {
         }
     }
 
-    /// 옮긴 뒤 사용자가 알아야 하는 것들 — 백업 파일, 이전 위치에 남은 파일, 로드 실패.
+    /// 예정대로 되지 않은 것만 알린다. 성공은 경로 줄이 바뀐 것으로 충분하다.
     private func showNotice(_ outcome: StorageService.PathChangeOutcome) {
         var lines: [String] = []
 
-        if let backup = outcome.backupPath {
-            lines.append("""
-                그 폴더에 있던 파일은 다음 이름으로 백업했습니다:
-                \(abbreviateHome(backup))
-                """)
-        }
         if let left = outcome.leftBehindPath {
             lines.append("""
-                이전 위치에 계정 \(outcome.leftBehindCount)개가 그대로 남아 있습니다:
+                이전 위치의 계정 파일(계정 \(outcome.leftBehindCount)개)을 예전 버전으로 \
+                표시하지 못했습니다:
                 \(abbreviateHome(left))
-                자동으로 지우지 않습니다. 그대로 두면 지금부터 두 파일이 따로 갈라지고, \
-                그 폴더가 iCloud라면 다른 Mac은 갱신이 멈춘 옛 데이터를 계속 보게 됩니다.
+                그대로 두면 지금부터 두 파일이 따로 갈라지고, 그 폴더가 iCloud라면 다른 Mac은 \
+                갱신이 멈춘 옛 데이터를 계속 보게 됩니다.
                 """)
         }
         if let error = outcome.loadError {
@@ -202,11 +201,12 @@ struct GeneralSettingsView: View {
                 \(error.localizedDescription)
                 """)
         }
+        guard !lines.isEmpty else { return }
 
         let alert = NSAlert()
-        alert.messageText = "저장 위치를 바꿨습니다"
+        alert.messageText = "저장 위치는 바꿨습니다"
         alert.informativeText = lines.joined(separator: "\n\n")
-        alert.alertStyle = outcome.loadError == nil ? .informational : .warning
+        alert.alertStyle = .warning
         alert.runModal()
     }
 
