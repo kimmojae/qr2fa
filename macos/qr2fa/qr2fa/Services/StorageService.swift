@@ -40,6 +40,24 @@ final class StorageService {
         "\(FileManager.default.homeDirectoryForCurrentUser.path)/.config/qr2fa"
     }
 
+    /// 데이터 폴더 이름. 사용자가 어떤 폴더를 고르든 이 이름의 하위 폴더에 넣는다.
+    static let dataDirectoryName = ".qr2fa"
+
+    /// 사용자가 패널에서 고른 폴더 안의 실제 데이터 폴더.
+    ///
+    /// 고른 폴더에 `accounts.json`을 그대로 놓으면 iCloud Drive나 Dropbox 최상위를 골랐을 때
+    /// 평문 TOTP 시크릿이 문서들 옆에 놓인다. 하위 폴더를 만드는 건 사용자가 아니라 앱이 할 일이다.
+    ///
+    /// 이미 데이터 폴더를 고른 경우(`.qr2fa`로 끝남)와 앱 전용 기본 폴더는 그대로 둔다 —
+    /// 전자는 `.qr2fa/.qr2fa`가 되고, 후자는 Go CLI가 읽는 `~/.config/qr2fa/accounts.json`과
+    /// 어긋난다.
+    static func dataDirectory(inside picked: String) -> String {
+        let trimmed = picked.hasSuffix("/") ? String(picked.dropLast()) : picked
+        if trimmed == localDefaultDirectory() { return trimmed }
+        if URL(fileURLWithPath: trimmed).lastPathComponent == dataDirectoryName { return trimmed }
+        return "\(trimmed)/\(dataDirectoryName)"
+    }
+
     /// 빈 문자열은 유효한 선택으로 보지 않는다 — 그대로 쓰면 루트에 쓰려다 실패한다.
     static func storedDirectory(defaults: UserDefaults) -> String? {
         let value = defaults.string(forKey: storageDirectoryKey) ?? ""
@@ -150,19 +168,40 @@ final class StorageService {
     /// 경우에도 원본이 디스크에 남아 있어야 한다. 휴지통도 백업도 없이 unlink하면 끝이다.
     @discardableResult
     static func backupIfPresent(_ path: String) throws -> String? {
+        try renameAside(path, as: path, kind: "bak")
+    }
+
+    /// 이전 위치에 남은 계정 파일을 그 위치의 데이터 폴더 안으로 넣고 `.old-<시각>`을 붙인다.
+    ///
+    /// 이름만 바꾸고 제자리에 두면, 최상위 폴더를 쓰던 사람에게는 평문 시크릿이 계속 문서들
+    /// 옆에 남는다. 앱이 만든 파일은 전부 `.qr2fa` 안에 있어야 정리도 한 곳에서 끝난다.
+    /// 같은 이름으로 남겨 두면 어느 쪽이 정본인지 파일만 봐서는 알 수 없고, 그 폴더가 iCloud면
+    /// 갱신이 멈춘 파일이 계속 동기화된다. 지우지는 않는다 — 내용이 복구 불가능한 시크릿이다.
+    @discardableResult
+    static func markOldIfPresent(_ path: String) throws -> String? {
+        guard FileManager.default.fileExists(atPath: path) else { return nil }
+        let url = URL(fileURLWithPath: path)
+        let currentDir = url.deletingLastPathComponent().path
+        let dataDir = dataDirectory(inside: currentDir)
+        if dataDir != currentDir { try createDirectory(dataDir) }
+        return try renameAside(path, as: "\(dataDir)/\(url.lastPathComponent)", kind: "old")
+    }
+
+    /// `path`의 파일을 `<base>.<kind>-<시각>`으로 옮긴다. 없으면 nil.
+    private static func renameAside(_ path: String, as base: String, kind: String) throws -> String? {
         let fm = FileManager.default
         guard fm.fileExists(atPath: path) else { return nil }
 
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        formatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
         formatter.locale = Locale(identifier: "en_US_POSIX")
         let stamp = formatter.string(from: Date())
 
-        // 같은 초에 두 번 눌러도 앞선 백업을 덮지 않도록 접미사를 붙여 빈자리를 찾는다.
-        var candidate = "\(path).bak-\(stamp)"
+        // 같은 초에 두 번 눌러도 앞선 파일을 덮지 않도록 접미사를 붙여 빈자리를 찾는다.
+        var candidate = "\(base).\(kind)-\(stamp)"
         var suffix = 1
         while fm.fileExists(atPath: candidate) {
-            candidate = "\(path).bak-\(stamp)-\(suffix)"
+            candidate = "\(base).\(kind)-\(stamp)-\(suffix)"
             suffix += 1
         }
         try fm.moveItem(atPath: path, toPath: candidate)
@@ -175,14 +214,22 @@ final class StorageService {
         var backupPath: String?
         /// 위치는 이미 바뀌었는데 새 위치의 파일을 읽지 못했다.
         var loadError: Error?
-        /// 이전 위치에 그대로 남은 계정 파일. 지우지 않는 건 의도지만, 이 순간부터 두 파일이
-        /// 조용히 갈라지므로(버려진 iCloud 파일은 계속 동기화된다) 반드시 알려야 한다.
+        /// 이전 위치의 계정 파일을 `.old-<시각>`으로 바꿔 둔 경로.
+        ///
+        /// 이 순간부터 두 파일이 조용히 갈라지므로(버려진 iCloud 파일은 계속 동기화된다)
+        /// 이름으로 예전 버전임을 드러낸다. 이전 경로를 아직 보고 있는 다른 Mac은 계정이
+        /// 0개로 보이게 되는데, 갱신이 멈춘 데이터를 계속 보여주는 것보다 낫다고 판단했다.
+        var markedOldPath: String?
+        /// 이름을 바꾸지 못해 이전 위치에 그대로 남은 계정 파일.
         var leftBehindPath: String?
         var leftBehindCount: Int = 0
 
-        var hasNotice: Bool {
-            backupPath != nil || loadError != nil || leftBehindPath != nil
-        }
+        /// 사용자를 멈춰 세울 만한 일이 있었는가.
+        ///
+        /// 성공적인 변경은 알리지 않는다 — 경로 줄이 바뀐 것 자체가 피드백이고, 백업과
+        /// "예전 버전으로 표시"는 그렇게 하겠다고 이미 말한 대로 된 것뿐이다. 예정대로
+        /// 되지 않은 것(이름을 못 바꿔 낡은 사본이 그대로 남음, 새 위치를 못 읽음)만 알린다.
+        var hasNotice: Bool { loadError != nil || leftBehindPath != nil }
     }
 
     /// 저장 위치를 바꾼다. 어떤 전략이든 기존 파일을 지우지 않는다 — 덮어쓰기는 항상 백업을 남긴다.
@@ -203,12 +250,19 @@ final class StorageService {
             outcome.backupPath = try materializeCurrentAccounts(at: newPath)
         }
 
-        // 어느 전략이든 이전 위치의 파일은 남긴다(복사지 이사가 아니다). 남았다는 사실을
-        // 여기서 확인해 둔다 — 포인터를 옮긴 뒤에는 previousPath를 다시 볼 수 없다.
+        // 어느 전략이든 이전 위치의 파일은 지우지 않는다(복사지 이사가 아니다). 대신 예전
+        // 버전임이 이름에 드러나게 바꾼다. 포인터를 옮긴 뒤에는 previousPath를 다시 볼 수
+        // 없으므로 여기서 처리한다.
         if previousPath != newPath,
            case .accounts(let count) = StorageService.inspectFile(at: previousPath), count > 0 {
-            outcome.leftBehindPath = previousPath
             outcome.leftBehindCount = count
+            do {
+                outcome.markedOldPath = try StorageService.markOldIfPresent(previousPath)
+            } catch {
+                // 위치 변경은 이미 끝났다. 이름을 못 바꿨다고 되돌리면 오히려 상태가 꼬이므로
+                // "그대로 남아 있다"고 알리는 데서 그친다.
+                outcome.leftBehindPath = previousPath
+            }
         }
 
         defaults.set(newDir, forKey: StorageService.storageDirectoryKey)
@@ -269,10 +323,13 @@ final class StorageService {
     struct CommitOutcome {
         /// 확정한 위치의 파일을 읽지 못했다. 위치는 이미 고정됐으므로 재시도는 의미가 없다.
         var loadError: Error?
-        /// 대상에 이미 파일이 있어 옮기지 못하고 남겨둔 이전 위치.
+        /// 대상에 이미 파일이 있어 옮기지 못한 임시 파일을 `.old-<시각>`으로 바꿔 둔 경로.
+        var markedOldPath: String?
+        /// 이름을 바꾸지 못해 이전 위치에 그대로 남은 계정 파일.
         var leftBehindPath: String?
         var leftBehindCount: Int = 0
 
+        /// 성공적인 확정은 알리지 않는다 — `PathChangeOutcome.hasNotice`와 같은 기준이다.
         var hasNotice: Bool { loadError != nil || leftBehindPath != nil }
     }
 
@@ -302,8 +359,12 @@ final class StorageService {
             // 대상에 이미 파일이 있으면 그쪽이 정본이고 임시 파일은 그대로 남는다. 소실은
             // 아니지만 그 계정들이 UI에서 사라지므로 조용히 넘어가면 안 된다.
             if case .accounts(let count) = StorageService.inspectFile(at: storagePath), count > 0 {
-                outcome.leftBehindPath = storagePath
                 outcome.leftBehindCount = count
+                do {
+                    outcome.markedOldPath = try StorageService.markOldIfPresent(storagePath)
+                } catch {
+                    outcome.leftBehindPath = storagePath
+                }
             }
         }
 

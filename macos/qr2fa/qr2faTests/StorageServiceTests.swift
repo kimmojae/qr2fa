@@ -214,8 +214,9 @@ final class StorageServiceTests: XCTestCase {
 
         XCTAssertEqual(service.storagePath, "\(targetDir)/accounts.json")
         XCTAssertEqual(service.accounts.first?.issuer, "TargetService")
-        // 임시 파일은 그대로 남아 있어야 한다 (지우지 않음)
-        XCTAssertTrue(FileManager.default.fileExists(atPath: tempPath))
+        // 임시 파일의 내용은 지우지 않는다 — 이름만 예전 버전으로 바꿔 둔다.
+        XCTAssertFalse(FileManager.default.fileExists(atPath: tempPath))
+        XCTAssertEqual(try oldCopies(of: tempPath).count, 1)
     }
 
     /// 대상이 비어 있으면 온보딩 중 임시로 쌓인 계정을 옮겨 간다.
@@ -255,7 +256,9 @@ final class StorageServiceTests: XCTestCase {
 
     /// 온보딩 창을 닫고 계정을 추가한 뒤, 이미 파일이 있는 폴더를 고른 경우 —
     /// 임시 파일이 남는다는 사실을 결과로 알려야 한다(조용히 고아가 되면 안 된다).
-    func test_commitInitialLocation_reportsLeftBehindAccounts() throws {
+    /// 대상에 이미 파일이 있어 임시 파일이 남는 경우, 그 파일은 예전 버전임이 이름에서
+    /// 드러나야 한다 — 같은 이름으로 남아 있으면 어느 쪽이 정본인지 파일만 봐선 모른다.
+    func test_commitInitialLocation_marksProvisionalFileAsOld() throws {
         let defaults = makeDefaults()
         let targetDir = makeTempDir()
         try writeStorage(at: "\(targetDir)/accounts.json", issuer: "TargetService")
@@ -264,9 +267,15 @@ final class StorageServiceTests: XCTestCase {
         let service = StorageService(path: tempPath, defaults: defaults)
         let outcome = try service.commitInitialLocation(directory: targetDir)
 
-        XCTAssertTrue(outcome.hasNotice)
-        XCTAssertEqual(outcome.leftBehindPath, tempPath)
+        // 예정대로 된 일은 알리지 않는다.
+        XCTAssertFalse(outcome.hasNotice)
+        XCTAssertNil(outcome.leftBehindPath, "이름을 바꿨으면 '그대로 남아 있다'가 아니다")
+        let marked = try XCTUnwrap(outcome.markedOldPath)
+        XCTAssertEqual(try oldCopies(of: tempPath), [marked])
         XCTAssertEqual(outcome.leftBehindCount, 1)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: tempPath))
+        // 내용은 그대로 살아 있어야 한다 — 복구 불가능한 시크릿이라 지우지 않는다.
+        XCTAssertTrue(try storedIssuers(at: marked).contains("ProvisionalService"))
         XCTAssertNil(outcome.loadError)
     }
 
@@ -331,7 +340,8 @@ final class StorageServiceTests: XCTestCase {
     }
 
     /// 여러 Mac을 iCloud로 합칠 때의 정상 경로 — 대상 파일을 정본으로 삼고 아무것도 덮지 않는다.
-    func test_changePath_adoptTarget_leavesBothFilesIntact() throws {
+    /// 이전 위치의 파일도 지우지 않는다(이름만 예전 버전으로 바뀐다).
+    func test_changePath_adoptTarget_keepsBothFilesContents() throws {
         let defaults = makeDefaults()
         let targetDir = makeTempDir()
         let target = "\(targetDir)/accounts.json"
@@ -344,7 +354,7 @@ final class StorageServiceTests: XCTestCase {
 
         XCTAssertNil(outcome.backupPath)
         XCTAssertEqual(service.accounts.first?.issuer, "TargetService")
-        XCTAssertTrue(FileManager.default.fileExists(atPath: tempPath))
+        XCTAssertEqual(try oldCopies(of: tempPath).count, 1)
         XCTAssertEqual(
             try FileManager.default.contentsOfDirectory(atPath: targetDir), ["accounts.json"]
         )
@@ -428,8 +438,8 @@ final class StorageServiceTests: XCTestCase {
 
         XCTAssertEqual(service.storagePath, "\(defaultDir)/accounts.json")
         XCTAssertEqual(service.accounts.first?.issuer, "ICloudService")
-        // 원본도 그대로 남는다 — 되돌리기는 복사지 이사가 아니다.
-        XCTAssertTrue(FileManager.default.fileExists(atPath: "\(iCloudDir)/accounts.json"))
+        // 원본 내용도 남는다 — 되돌리기는 복사지 이사가 아니다. 다만 이름은 예전 버전으로 바뀐다.
+        XCTAssertEqual(try oldCopies(of: "\(iCloudDir)/accounts.json").count, 1)
     }
 
     /// 기본 폴더에 이미 파일이 있으면(당황해서 계정을 다시 등록한 경우) 그것도 백업된다.
@@ -573,7 +583,7 @@ final class StorageServiceTests: XCTestCase {
 
     /// 실질 위험은 "원본이 남는 것"이 아니라 그 순간부터 두 파일이 조용히 갈라진다는 것이다 —
     /// 버려진 iCloud 파일은 계속 동기화되어 다른 Mac은 갱신이 멈춘 옛 데이터를 계속 본다.
-    func test_changePath_reportsLeftBehindAccounts() throws {
+    func test_changePath_marksPreviousFileAsOld() throws {
         let defaults = makeDefaults()
         let targetDir = makeTempDir()
         try writeStorage(at: tempPath, issuer: "CurrentService")
@@ -584,9 +594,33 @@ final class StorageServiceTests: XCTestCase {
             to: "\(targetDir)/accounts.json", strategy: .copyCurrent
         )
 
-        XCTAssertEqual(outcome.leftBehindPath, tempPath)
+        XCTAssertNil(outcome.leftBehindPath)
+        let marked = try XCTUnwrap(outcome.markedOldPath)
+        XCTAssertEqual(try oldCopies(of: tempPath), [marked])
         XCTAssertEqual(outcome.leftBehindCount, 1)
-        XCTAssertTrue(outcome.hasNotice)
+        XCTAssertFalse(outcome.hasNotice, "예정대로 된 일은 알리지 않는다")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: tempPath))
+        XCTAssertTrue(try storedIssuers(at: marked).contains("CurrentService"))
+        // 새 위치는 멀쩡해야 한다.
+        XCTAssertTrue(try storedIssuers(at: "\(targetDir)/accounts.json").contains("CurrentService"))
+    }
+
+    /// 대상 파일을 정본으로 삼는 경우에도 이전 위치는 낡은 사본이 된다.
+    func test_changePath_adoptTarget_marksPreviousFileAsOld() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+        try writeStorage(at: tempPath, issuer: "CurrentService")
+        try writeStorage(at: "\(targetDir)/accounts.json", issuer: "TargetService")
+
+        let service = StorageService(path: tempPath, defaults: defaults)
+        try service.load()
+        let outcome = try service.changePath(
+            to: "\(targetDir)/accounts.json", strategy: .adoptTarget
+        )
+
+        let marked = try XCTUnwrap(outcome.markedOldPath)
+        XCTAssertTrue(try storedIssuers(at: marked).contains("CurrentService"))
+        XCTAssertEqual(service.accounts.map(\.issuer), ["TargetService"])
     }
 
     /// 이전 위치에 파일이 없으면 알릴 것도 없다.
@@ -601,7 +635,65 @@ final class StorageServiceTests: XCTestCase {
         )
 
         XCTAssertNil(outcome.leftBehindPath)
+        XCTAssertNil(outcome.markedOldPath)
         XCTAssertFalse(outcome.hasNotice)
+    }
+
+    /// 이름만 바꾸고 제자리에 두면 최상위를 쓰던 사람에게는 평문 시크릿이 문서들 옆에 남는다.
+    /// 표시된 파일도 그 위치의 `.qr2fa` 안으로 들어가야 한다.
+    func test_markOld_movesFileIntoQr2faFolder() throws {
+        let dir = makeTempDir()
+        let path = "\(dir)/accounts.json"
+        try writeStorage(at: path, issuer: "OldService")
+
+        let marked = try XCTUnwrap(StorageService.markOldIfPresent(path))
+
+        XCTAssertTrue(marked.hasPrefix("\(dir)/.qr2fa/accounts.json.old-"), marked)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: path))
+        XCTAssertTrue(try storedIssuers(at: marked).contains("OldService"))
+    }
+
+    /// 이미 데이터 폴더 안이면 옮길 곳이 없다 — `.qr2fa/.qr2fa`를 만들면 안 된다.
+    func test_markOld_staysInPlaceWhenAlreadyInQr2faFolder() throws {
+        let dir = "\(makeTempDir())/.qr2fa"
+        try StorageService.createDirectory(dir)
+        let path = "\(dir)/accounts.json"
+        try writeStorage(at: path, issuer: "OldService")
+
+        let marked = try XCTUnwrap(StorageService.markOldIfPresent(path))
+
+        XCTAssertTrue(marked.hasPrefix("\(dir)/accounts.json.old-"), marked)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: "\(dir)/.qr2fa"))
+    }
+
+    // MARK: - Picked folder normalisation
+
+    /// 사용자가 고른 폴더에는 항상 `.qr2fa`가 한 겹 붙는다 — 동기화 폴더 최상위에 평문
+    /// 시크릿이 문서들 옆에 놓이는 걸 막는다.
+    func test_dataDirectory_appendsQr2faToPickedFolder() {
+        XCTAssertEqual(
+            StorageService.dataDirectory(inside: "/Users/x/Library/Mobile Documents/com~apple~CloudDocs"),
+            "/Users/x/Library/Mobile Documents/com~apple~CloudDocs/.qr2fa"
+        )
+    }
+
+    /// 이미 데이터 폴더를 고른 사람에게 `.qr2fa/.qr2fa`를 만들면 안 된다.
+    func test_dataDirectory_doesNotNestWhenAlreadyQr2fa() {
+        XCTAssertEqual(
+            StorageService.dataDirectory(inside: "/Users/x/Dropbox/.qr2fa"),
+            "/Users/x/Dropbox/.qr2fa"
+        )
+        // 끝의 슬래시도 같은 폴더다.
+        XCTAssertEqual(
+            StorageService.dataDirectory(inside: "/Users/x/Dropbox/.qr2fa/"),
+            "/Users/x/Dropbox/.qr2fa"
+        )
+    }
+
+    /// 앱 전용 기본 폴더는 이미 자기 폴더라 한 겹 더 만들 이유가 없다(Go CLI 경로와도 어긋난다).
+    func test_dataDirectory_keepsLocalDefaultAsIs() {
+        let local = StorageService.localDefaultDirectory()
+        XCTAssertEqual(StorageService.dataDirectory(inside: local), local)
     }
 
     // MARK: - Permissions
@@ -609,6 +701,27 @@ final class StorageServiceTests: XCTestCase {
     private func permissions(of path: String) throws -> Int {
         let attrs = try FileManager.default.attributesOfItem(atPath: path)
         return try XCTUnwrap(attrs[.posixPermissions] as? NSNumber).intValue
+    }
+
+    /// 예전 버전으로 표시된 사본들의 전체 경로. 표시된 파일은 그 위치의 데이터 폴더 안으로 들어간다.
+    private func oldCopies(of path: String) throws -> [String] {
+        let url = URL(fileURLWithPath: path)
+        let dir = StorageService.dataDirectory(inside: url.deletingLastPathComponent().path)
+        let prefix = url.lastPathComponent + ".old-"
+        guard FileManager.default.fileExists(atPath: dir) else { return [] }
+        return try FileManager.default.contentsOfDirectory(atPath: dir)
+            .filter { $0.hasPrefix(prefix) }
+            .map { "\(dir)/\($0)" }
+    }
+
+    /// 저장 파일에 들어 있는 issuer 목록. 이름이 바뀐 파일의 내용이 살아 있는지 볼 때 쓴다.
+    private func storedIssuers(at path: String) throws -> [String] {
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        let json = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        let accounts = try XCTUnwrap(json["accounts"] as? [[String: Any]])
+        return accounts.compactMap { $0["issuer"] as? String }
     }
 
     private func makeAccount(issuer: String = "GitHub") -> Account {
