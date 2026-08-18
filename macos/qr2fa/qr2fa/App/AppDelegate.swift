@@ -150,28 +150,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             NSApp.setActivationPolicy(.regular)
-            NSApp.activate(ignoringOtherApps: true)
             // SwiftUI가 소유한 Window 씬을 openWindow 액션으로 연다.
             self.presentSettings?()
-            // 창이 뜬 뒤, 닫힘을 관찰해 다시 액세서리 모드로 돌리고 위치를 보정한다.
-            DispatchQueue.main.async {
-                guard let window = self.settingsSceneWindow() else { return }
-                if self.settingsWindow !== window {
-                    self.settingsWindow = window
-                    NotificationCenter.default.addObserver(
-                        self,
-                        selector: #selector(self.settingsWindowWillClose(_:)),
-                        name: NSWindow.willCloseNotification,
-                        object: window
-                    )
-                }
-                window.toolbarStyle = .unified
-                // 씬이 복원한 위치가 화면 밖이면 가운데로.
-                if !NSScreen.screens.contains(where: { $0.frame.intersects(window.frame) }) {
-                    window.center()
-                }
-            }
+            self.finishPresentingSettings(attemptsLeft: 20)
         }
+    }
+
+    /// 설정 창이 실제로 생긴 뒤에 앞으로 꺼내고 앱을 활성화한다.
+    ///
+    /// 예전엔 `openWindow` 직후 다음 런루프에 딱 한 번 창을 찾고, 못 찾으면 그냥 return이었다.
+    /// 그런데 (1) `presentSettings` 배선은 온보딩 씬의 onAppear에서 이뤄지므로 로그인 항목으로 막
+    /// 떠오른 직후엔 아직 nil일 수 있고, (2) `openWindow`가 만드는 창이 그 한 번의 확인 시점에
+    /// 항상 있는 것도 아니며, (3) `.accessory` → `.regular`로 바꾼 직후의 `activate`는 자주
+    /// 무시된다. 그래서 첫 클릭이 아무 일도 안 하거나 설정 창이 다른 앱 창 뒤에서 열려 "두 번
+    /// 눌러야 되는" 증상이 났다. 창이 나타날 때까지 짧게 재시도하고, 찾은 뒤에 order-front와
+    /// activate를 한다.
+    private func finishPresentingSettings(attemptsLeft: Int) {
+        guard let window = settingsSceneWindow() else {
+            guard attemptsLeft > 0 else {
+                NSLog("qr2fa: settings window did not appear")
+                // 창 없이 Dock 아이콘만 남기지 않는다.
+                NSApp.setActivationPolicy(.accessory)
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+                guard let self else { return }
+                // 배선이 늦게 끝났을 수 있으니 다시 부른다. 이미 열린 창에 대해선 무해하다.
+                self.presentSettings?()
+                self.finishPresentingSettings(attemptsLeft: attemptsLeft - 1)
+            }
+            return
+        }
+        // 창이 뜬 뒤, 닫힘을 관찰해 다시 액세서리 모드로 돌리고 위치를 보정한다.
+        if settingsWindow !== window {
+            settingsWindow = window
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(settingsWindowWillClose(_:)),
+                name: NSWindow.willCloseNotification,
+                object: window
+            )
+        }
+        window.toolbarStyle = .unified
+        // 씬이 복원한 위치가 화면 밖이면 가운데로.
+        if !NSScreen.screens.contains(where: { $0.frame.intersects(window.frame) }) {
+            window.center()
+        }
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     @objc private func settingsWindowWillClose(_ note: Notification) {
