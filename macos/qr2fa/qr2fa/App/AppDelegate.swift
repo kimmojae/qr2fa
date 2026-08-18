@@ -17,6 +17,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         false
     }
 
+    /// Spotlight/Dock에서 이미 실행 중인 앱을 다시 "실행"했을 때.
+    ///
+    /// 기본 동작에 맡기면 AppKit이 예전에 order-out된 창을 전부 다시 앞으로 꺼낸다. 온보딩 창은
+    /// `dismissWindow`로 화면에서만 내려간 상태(창 객체는 계속 살아 있다)라, 저장 위치를 이미 고른
+    /// 사용자에게도 "MFA 데이터를 어디에 저장할까요?"가 다시 뜬다 — 로그인 항목으로 떠 있는 앱을
+    /// Spotlight에서 켜면 매번 재현된다. 메뉴바 앱에서 재실행의 의미는 설정 창을 보여 달라는
+    /// 것이므로 직접 처리한다.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        // 아직 위치를 고르지 않았다면 온보딩 창이 앞으로 나오는 게 맞다.
+        guard !storageService.needsLocationChoice else { return true }
+        hideOnboardingWindow()
+        openSettings()
+        return false
+    }
+
+    /// `false`를 돌려줘도 AppKit이 이미 창을 꺼내 놓은 경우가 있어, 다음 런루프에서 한 번 더 내린다.
+    private func hideOnboardingWindow() {
+        onboardingSceneWindow()?.orderOut(nil)
+        DispatchQueue.main.async { [weak self] in
+            self?.onboardingSceneWindow()?.orderOut(nil)
+        }
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         // 메인 메뉴는 SwiftUI(App 씬)가 표준 구성으로 만든다. 직접 덮어쓰지 않아야
@@ -36,10 +59,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 닫아도 `.accessory`로 안 돌아가 Dock 아이콘이 남았다). 씬 id로 정확히 고른다.
     /// SwiftUI는 씬 id를 창의 identifier와 frameAutosaveName에 넣는데, 어느 쪽이 채워질지는
     /// 보장되지 않아 둘 다 본다.
-    private func settingsSceneWindow() -> NSWindow? {
+    private func settingsSceneWindow() -> NSWindow? { sceneWindow(id: AppWindowID.settings) }
+
+    private func onboardingSceneWindow() -> NSWindow? { sceneWindow(id: AppWindowID.onboarding) }
+
+    private func sceneWindow(id: String) -> NSWindow? {
         NSApp.windows.first {
-            $0.identifier?.rawValue == AppWindowID.settings
-                || $0.frameAutosaveName == AppWindowID.settings
+            $0.identifier?.rawValue == id || $0.frameAutosaveName == id
         }
     }
 
