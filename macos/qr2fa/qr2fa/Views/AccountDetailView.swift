@@ -28,9 +28,7 @@ struct AccountDetailView: View {
                 Section {
                     infoServiceRow
                     infoAccountRow
-                    if isEditing || !account.tag.isEmpty {
-                        infoTagRow
-                    }
+                    infoTagRow
                     infoSecretRow
                 }
 
@@ -121,6 +119,11 @@ struct AccountDetailView: View {
                     .textFieldStyle(.roundedBorder)
                     .labelsHidden()
                     .font(.system(size: 14, weight: .medium))
+            } else if account.tag.isEmpty {
+                // 태그가 없어도 블록 자체는 남기고, 값만 비어 있음(-)으로 표시한다.
+                Text("-")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.secondary)
             } else {
                 TagBadgeView(tag: account.tag)
             }
