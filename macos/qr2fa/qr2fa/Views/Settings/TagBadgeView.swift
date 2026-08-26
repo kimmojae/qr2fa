@@ -1,4 +1,12 @@
+import AppKit
 import SwiftUI
+
+/// 태그 색은 프리셋 없이 하나로 통일한다. 설정 창과 메뉴바가 같은 값을 쓰도록 여기서만 정의한다.
+/// (파란색은 리스트 선택 하이라이트와 겹쳐서 teal 사용)
+enum TagPalette {
+    static let color = Color.teal
+    static let nsColor = NSColor(color)
+}
 
 struct TagBadgeView: View {
     let tag: String
@@ -27,8 +35,6 @@ struct TagBadgeView: View {
         }
     }
 
-    // 프리셋/색 매핑을 없앴으므로 모든 태그는 단일 색으로 통일한다.
-    // (파란색은 리스트 선택 하이라이트와 겹쳐서 teal 사용)
-    var color: Color { .teal }
+    var color: Color { TagPalette.color }
 }
 

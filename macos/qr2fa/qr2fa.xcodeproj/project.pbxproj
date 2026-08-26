@@ -29,6 +29,7 @@
 		A3EF3DE80D032D4A3F4A7FCA /* ScreenCaptureKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C0C1542EA75DD7AC6ED065A /* ScreenCaptureKit.framework */; };
 		AF409432B44BF07BDB5A9B04 /* AccountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70A129B0D600674D2913C90 /* AccountTests.swift */; };
 		C08CA2EF2820FF0A78F25B63 /* StorageLocationSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE7F2F57AE6BE17E4212AD3C /* StorageLocationSupport.swift */; };
+		C15851DD242D5AE13B4300A0 /* AccountMenuItemLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0E135F4E552E94FC512DA96 /* AccountMenuItemLayoutTests.swift */; };
 		CE6043988BF08494C558F41D /* qr2faApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E3780EDA60632058320D35C /* qr2faApp.swift */; };
 		DF09CA7F06203CC0EE68C681 /* StorageLocationDecisionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05576E86F1D49A7E9498DD19 /* StorageLocationDecisionTests.swift */; };
 		DF4A30EE2A5DE5D37A3EC2A7 /* TOTPGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03F34D82B7A1BCF1EC6B7E15 /* TOTPGeneratorTests.swift */; };
@@ -76,6 +77,7 @@
 		E70A129B0D600674D2913C90 /* AccountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTests.swift; sourceTree = "<group>"; };
 		ED616089CB032DBD46721CF3 /* AccountMenuItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountMenuItemView.swift; sourceTree = "<group>"; };
 		F0C7D43B89861E28DBD9C096 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		F0E135F4E552E94FC512DA96 /* AccountMenuItemLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountMenuItemLayoutTests.swift; sourceTree = "<group>"; };
 		F18F2A75E8D589092F833454 /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
 		FFDD44328F364C39D1148364 /* qr2faTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = qr2faTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -127,6 +129,7 @@
 		61EA82ED013B6B13DCC7B9B5 /* qr2faTests */ = {
 			isa = PBXGroup;
 			children = (
+				F0E135F4E552E94FC512DA96 /* AccountMenuItemLayoutTests.swift */,
 				E70A129B0D600674D2913C90 /* AccountTests.swift */,
 				7C1FA115DCA7679BDAA7781C /* PlaceholderTests.swift */,
 				05576E86F1D49A7E9498DD19 /* StorageLocationDecisionTests.swift */,
@@ -323,6 +326,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C15851DD242D5AE13B4300A0 /* AccountMenuItemLayoutTests.swift in Sources */,
 				AF409432B44BF07BDB5A9B04 /* AccountTests.swift in Sources */,
 				9C05264088E598FCAC8E2579 /* PlaceholderTests.swift in Sources */,
 				DF09CA7F06203CC0EE68C681 /* StorageLocationDecisionTests.swift in Sources */,
