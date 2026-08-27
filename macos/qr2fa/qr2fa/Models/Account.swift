@@ -13,6 +13,10 @@ struct Account: Codable, Identifiable, Equatable, Hashable {
 }
 
 extension Account {
+    /// How this account is grouped and titled in the UI. An account with no issuer
+    /// stands as its own service, so it is labelled by its name.
+    var displayIssuer: String { issuer.isEmpty ? name : issuer }
+
     func toOTPAuthURL() -> String {
         let encodedIssuer = issuer.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? issuer
         let encodedName = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name

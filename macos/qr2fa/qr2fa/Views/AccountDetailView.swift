@@ -297,16 +297,46 @@ struct AccountDetailView: View {
 
     private func deleteAccount() {
         let alert = NSAlert()
-        let displayName = account.issuer.isEmpty ? account.name : account.issuer
-        alert.messageText = "\(displayName) 계정을 삭제할까요?"
-        alert.informativeText = "되돌릴 수 없습니다."
+        alert.messageText = DeleteConfirmation.title(for: account)
+        alert.informativeText = DeleteConfirmation.detail(for: account)
         alert.alertStyle = .warning
         alert.addButton(withTitle: "삭제")
         alert.addButton(withTitle: "취소")
         alert.buttons[0].hasDestructiveAction = true
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
-        guard (try? storageService.delete(id: account.id)) != nil else { return }
-        onDelete()
+        alert.buttons[1].keyEquivalent = "\u{1b}"
+
+        let confirm: (NSApplication.ModalResponse) -> Void = { response in
+            guard response == .alertFirstButtonReturn else { return }
+            guard (try? storageService.delete(id: account.id)) != nil else { return }
+            onDelete()
+        }
+
+        // 이 창에 속한 계정을 지우는 확인이므로 창에 붙인다. `runModal()`은 창이 아니라
+        // 화면 기준으로 위치를 잡아서, 설정 창과 무관한 자리에 뜬 것처럼 보였다.
+        if let window = NSApp.keyWindow {
+            alert.beginSheetModal(for: window, completionHandler: confirm)
+        } else {
+            confirm(alert.runModal())
+        }
+    }
+}
+
+/// 삭제 확인 문구. 같은 서비스에 계정이 여러 개면 서비스 이름만으로는 무엇이 지워지는지
+/// 알 수 없으므로, Finder처럼 고유한 이름을 제목에 두고 나머지는 본문에 붙인다.
+enum DeleteConfirmation {
+    static func title(for account: Account) -> String {
+        "'\(account.name.isEmpty ? account.displayIssuer : account.name)' 계정을 삭제할까요?"
+    }
+
+    static func detail(for account: Account) -> String {
+        var identity: [String] = []
+        if !account.issuer.isEmpty { identity.append(account.issuer) }
+        if !account.tag.isEmpty { identity.append("태그 \(account.tag)") }
+
+        // 시크릿은 복구할 수 없다 — "되돌릴 수 없습니다"만으로는 그 대가가 전해지지 않는다.
+        let warning = "되돌릴 수 없습니다. 이 계정의 인증 코드를 다시 쓰려면 QR을 새로 등록해야 합니다."
+        guard !identity.isEmpty else { return warning }
+        return identity.joined(separator: " · ") + "\n\n" + warning
     }
 }
 
