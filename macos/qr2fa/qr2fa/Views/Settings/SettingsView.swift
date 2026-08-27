@@ -1,24 +1,40 @@
 import SwiftUI
 
+/// The two sidebar rows that are not services.
+enum SettingsSelection {
+    static let allAccounts = "__all__"
+    static let general = "__general__"
+}
+
+/// Where the sidebar should land right after accounts were added.
+enum AddedAccountFocus {
+    /// The service tab that shows *all* of `added`, or `nil` when nothing was added.
+    /// A mixed import has no such tab, so it falls back to 모든 계정 — sending it to
+    /// one service would hide the rest of what the user just imported.
+    static func issuer(for added: [Account]) -> String? {
+        guard let first = added.first else { return nil }
+        let issuers = Set(added.map(\.displayIssuer))
+        return issuers.count == 1 ? first.displayIssuer : SettingsSelection.allAccounts
+    }
+}
+
 struct SettingsView: View {
     @Environment(StorageService.self) private var storageService
-    @State private var selectedIssuer: String? = "__all__"
+    @State private var selectedIssuer: String? = SettingsSelection.allAccounts
     @State private var selectedAccountID: Int? = nil
     @State private var showingAddSheet = false
     @State private var isEditingAccount: Bool = false
+    @State private var scrollTarget: Int?
 
     private var issuers: [String] {
-        let all = storageService.accounts.map { $0.issuer.isEmpty ? $0.name : $0.issuer }
-        return Array(Set(all)).sorted()
+        Array(Set(storageService.accounts.map(\.displayIssuer))).sorted()
     }
 
     private var listedAccounts: [Account] {
-        guard let issuer = selectedIssuer, issuer != "__all__" else {
+        guard let issuer = selectedIssuer, issuer != SettingsSelection.allAccounts else {
             return storageService.accounts
         }
-        return storageService.accounts.filter {
-            ($0.issuer.isEmpty ? $0.name : $0.issuer) == issuer
-        }
+        return storageService.accounts.filter { $0.displayIssuer == issuer }
     }
 
     private var selectedAccount: Account? {
@@ -27,12 +43,12 @@ struct SettingsView: View {
     }
 
     private var isGeneralSelected: Bool {
-        selectedIssuer == "__general__"
+        selectedIssuer == SettingsSelection.general
     }
 
     // 사이드바에서 선택한 항목의 이름 — 둘째 열(계정 목록) 상단 제목으로 쓴다.
     private var contentTitle: String {
-        guard let issuer = selectedIssuer, issuer != "__all__" else {
+        guard let issuer = selectedIssuer, issuer != SettingsSelection.allAccounts else {
             return "모든 계정"
         }
         return issuer
@@ -54,6 +70,7 @@ struct SettingsView: View {
                 NavigationSplitView {
                     sidebarView
                 } content: {
+                    ScrollViewReader { proxy in
                     // 빈 공간 클릭 등으로 들어오는 nil(선택 해제)은 무시한다.
                     // 원본 State가 안 바뀌므로 해제→복원 왕복이 없고, 탭 깜빡임도 안 생긴다.
                     List(selection: Binding(
@@ -63,6 +80,15 @@ struct SettingsView: View {
                         ForEach(listedAccounts) { account in
                             AccountRowView(account: account)
                                 .tag(account.id)
+                                .id(account.id)
+                        }
+                    }
+                    .onChange(of: scrollTarget) { _, target in
+                        // 목록이 새 선택으로 갱신된 다음에 스크롤해야 대상 행이 존재한다.
+                        guard let target else { return }
+                        DispatchQueue.main.async {
+                            withAnimation { proxy.scrollTo(target) }
+                            scrollTarget = nil
                         }
                     }
                     .listStyle(.inset)
@@ -80,6 +106,7 @@ struct SettingsView: View {
                                 selectedAccountID = restore
                             }
                         }
+                    }
                     }
                 } detail: {
                     if let account = selectedAccount {
@@ -126,7 +153,10 @@ struct SettingsView: View {
                     }
                 }
                 .sheet(isPresented: $showingAddSheet) {
-                    AccountAddSheet().environment(storageService)
+                    AccountAddSheet { added in
+                        focus(on: added)
+                    }
+                    .environment(storageService)
                 }
             }
         }
@@ -137,7 +167,7 @@ struct SettingsView: View {
         }
         .onDisappear {
             // 창을 닫을 때 상태를 초기화해서, 다음에 열 때는 항상 "모든 계정"에서 시작하게 한다.
-            selectedIssuer = "__all__"
+            selectedIssuer = SettingsSelection.allAccounts
             selectedAccountID = nil
             isEditingAccount = false
         }
@@ -147,19 +177,35 @@ struct SettingsView: View {
             // 사라진 이름을 그대로 붙들고 있어 "빈 서비스"가 선택된 것처럼 보인다.
             // 그런 상태가 되면 "모든 계정"으로 되돌린다.
             guard let issuer = selectedIssuer,
-                  issuer != "__all__", issuer != "__general__",
+                  issuer != SettingsSelection.allAccounts, issuer != SettingsSelection.general,
                   !issuers.contains(issuer) else { return }
-            selectedIssuer = "__all__"
+            selectedIssuer = SettingsSelection.allAccounts
         }
         .onChange(of: selectedIssuer) {
             // sidebarView 안이 아니라 여기(Group)에 붙인다 — sidebarView는 일반⇄계정 전환마다
             // 다시 마운트되는 인스턴스라, 전환을 유발한 바로 그 선택 변경에 대해서는 onChange가
             // 발동하지 않을 수 있다. Group은 정체성이 유지되므로 모든 전환에서 안정적으로 발동한다.
             guard !isGeneralSelected else { return }
-            // 서비스 그룹을 바꾸면 편집 상태를 끄고 그 그룹의 첫 번째 계정을 선택한다.
+            // 서비스 그룹을 바꾸면 편집 상태를 끈다. 계정 선택은 이미 그 그룹에 속한 계정이
+            // 선택돼 있으면 건드리지 않는다 — 계정을 추가한 직후 새 계정으로 보내는 이동이
+            // 여기서 그 그룹의 첫 계정으로 되돌려지면 안 된다.
             isEditingAccount = false
-            selectedAccountID = listedAccounts.first?.id
+            if !listedAccounts.contains(where: { $0.id == selectedAccountID }) {
+                selectedAccountID = listedAccounts.first?.id
+            }
         }
+    }
+
+    /// Shows what was just added: the service tab that covers all of it, with the
+    /// first new account selected and scrolled into view.
+    private func focus(on added: [Account]) {
+        guard let issuer = AddedAccountFocus.issuer(for: added),
+              let first = added.first else { return }
+        isEditingAccount = false
+        selectedAccountID = first.id
+        selectedIssuer = issuer
+        // A List does not scroll to a selection that changed in code.
+        scrollTarget = first.id
     }
 
     private var logoTitle: some View {
@@ -179,12 +225,12 @@ struct SettingsView: View {
         List(selection: $selectedIssuer) {
             Section {
                 Text("일반")
-                    .tag("__general__")
+                    .tag(SettingsSelection.general)
             }
 
             Section("계정") {
                 Text("모든 계정")
-                    .tag("__all__")
+                    .tag(SettingsSelection.allAccounts)
 
                 ForEach(issuers, id: \.self) { issuer in
                     Text(issuer)
@@ -211,7 +257,7 @@ private struct AccountRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 5) {
-                Text(account.issuer.isEmpty ? account.name : account.issuer)
+                Text(account.displayIssuer)
                     .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
                 if !account.tag.isEmpty {

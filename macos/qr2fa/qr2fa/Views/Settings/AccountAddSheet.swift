@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct AccountAddSheet: View {
+    /// The accounts this sheet stored, so the caller can show them.
+    var onAdded: ([Account]) -> Void = { _ in }
+
     @Environment(StorageService.self) private var storageService
     @Environment(\.dismiss) private var dismiss
 
@@ -313,17 +316,18 @@ struct AccountAddSheet: View {
     private func addAccounts() {
         errorMessage = nil
         do {
+            var added: [Account] = []
             switch tab {
             case .qr:
                 if !migrationAccounts.isEmpty {
                     for entry in migrationAccounts where !entry.skip {
                         var acc = entry.account
                         acc.tag = entry.tag.trimmingCharacters(in: .whitespaces)
-                        try storageService.add(acc)
+                        added.append(try storageService.add(acc))
                     }
                 } else if var acc = parsedAccount {
                     acc.tag = tag.trimmingCharacters(in: .whitespaces)
-                    try storageService.add(acc)
+                    added.append(try storageService.add(acc))
                 }
             case .manual:
                 let clean = secret.uppercased().trimmingCharacters(in: CharacterSet(charactersIn: "= "))
@@ -331,8 +335,9 @@ struct AccountAddSheet: View {
                     id: 0, name: name, issuer: issuer, secret: clean,
                     tag: tag.trimmingCharacters(in: .whitespaces), algorithm: "SHA1", digits: 6, period: 30, createdAt: Date()
                 )
-                try storageService.add(acc)
+                added.append(try storageService.add(acc))
             }
+            onAdded(added)
             dismiss()
         } catch {
             errorMessage = error.localizedDescription

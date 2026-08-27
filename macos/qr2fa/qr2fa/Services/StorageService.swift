@@ -424,13 +424,15 @@ final class StorageService {
 
     // MARK: - CRUD
 
-    func add(_ account: Account) throws {
+    @discardableResult
+    func add(_ account: Account) throws -> Account {
         nextId += 1
         var acc = account
         acc.id = nextId
         acc.createdAt = Date()
         accounts.append(acc)
         try save()
+        return acc
     }
 
     func update(_ account: Account) throws {
