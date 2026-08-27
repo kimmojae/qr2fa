@@ -448,6 +448,18 @@ final class StorageService {
         try save()
     }
 
+    /// Replaces the stored order. Rejects anything that is not a pure permutation —
+    /// reordering must never be a path that loses or duplicates an account, because
+    /// the payload is unrecoverable TOTP secrets.
+    func reorder(to reordered: [Account]) throws {
+        guard reordered.count == accounts.count,
+              Set(reordered.map(\.id)) == Set(accounts.map(\.id)) else {
+            throw StorageError.notAReordering
+        }
+        accounts = reordered
+        try save()
+    }
+
     // MARK: - Private helpers
 
     private static func decodeDateStrategy(_ decoder: Decoder) throws -> Date {
@@ -464,5 +476,12 @@ final class StorageService {
 
 enum StorageError: LocalizedError {
     case accountNotFound
-    var errorDescription: String? { "Account not found" }
+    case notAReordering
+
+    var errorDescription: String? {
+        switch self {
+        case .accountNotFound: "Account not found"
+        case .notAReordering: "Reordering must keep every account exactly once"
+        }
+    }
 }

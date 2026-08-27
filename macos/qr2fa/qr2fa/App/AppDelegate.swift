@@ -139,10 +139,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func groupedAccounts() -> [(String, [Account])] {
         var dict: [String: [Account]] = [:]
         for acc in storageService.accounts {
-            let key = acc.issuer.isEmpty ? acc.name : acc.issuer
-            dict[key, default: []].append(acc)
+            dict[acc.displayIssuer, default: []].append(acc)
         }
-        return dict.keys.sorted().map { ($0, dict[$0]!) }
+        // 이름순이 아니라 사용자가 설정 창에서 정한 순서(= 저장 순서)를 따른다.
+        return AccountOrdering.issuers(in: storageService.accounts).map { ($0, dict[$0]!) }
     }
 
     @objc private func openSettings() {

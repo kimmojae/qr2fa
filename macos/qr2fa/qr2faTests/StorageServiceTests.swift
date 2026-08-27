@@ -817,3 +817,48 @@ final class StorageServiceTests: XCTestCase {
         XCTAssertEqual(StorageService.inspectTarget(directory: dir), .unreadable)
     }
 }
+
+// MARK: - Reordering
+
+extension StorageServiceTests {
+
+    private func seeded() throws -> StorageService {
+        let service = StorageService(path: tempPath)
+        try service.load()
+        for issuer in ["A", "B"] {
+            try service.add(Account(
+                id: 0, name: "user", issuer: issuer,
+                secret: "JBSWY3DPEHPK3PXP", tag: "",
+                algorithm: "SHA1", digits: 6, period: 30, createdAt: Date()
+            ))
+        }
+        return service
+    }
+
+    func test_reorder_persistsTheNewOrder() throws {
+        let service = try seeded()
+
+        try service.reorder(to: service.accounts.reversed())
+        XCTAssertEqual(service.accounts.map(\.issuer), ["B", "A"])
+
+        let reloaded = StorageService(path: tempPath)
+        try reloaded.load()
+        XCTAssertEqual(reloaded.accounts.map(\.issuer), ["B", "A"])
+    }
+
+    /// Reordering is not a delete path — the secrets are unrecoverable.
+    func test_reorder_rejectsADroppedAccount() throws {
+        let service = try seeded()
+
+        XCTAssertThrowsError(try service.reorder(to: [service.accounts[0]]))
+        XCTAssertEqual(service.accounts.map(\.issuer), ["A", "B"])
+    }
+
+    func test_reorder_rejectsADuplicatedAccount() throws {
+        let service = try seeded()
+        let duplicated = [service.accounts[0], service.accounts[0]]
+
+        XCTAssertThrowsError(try service.reorder(to: duplicated))
+        XCTAssertEqual(service.accounts.map(\.issuer), ["A", "B"])
+    }
+}

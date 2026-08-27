@@ -27,7 +27,7 @@ struct SettingsView: View {
     @State private var scrollTarget: Int?
 
     private var issuers: [String] {
-        Array(Set(storageService.accounts.map(\.displayIssuer))).sorted()
+        AccountOrdering.issuers(in: storageService.accounts)
     }
 
     private var listedAccounts: [Account] {
@@ -82,6 +82,7 @@ struct SettingsView: View {
                                 .tag(account.id)
                                 .id(account.id)
                         }
+                        .onMove(perform: selectedService == nil ? nil : moveAccounts(from:to:))
                     }
                     .onChange(of: scrollTarget) { _, target in
                         // 목록이 새 선택으로 갱신된 다음에 스크롤해야 대상 행이 존재한다.
@@ -196,6 +197,35 @@ struct SettingsView: View {
         }
     }
 
+    /// The service whose accounts are on screen, or nil for 모든 계정.
+    ///
+    /// Account drag-reordering is offered only inside a service: dragging across service
+    /// boundaries in 모든 계정 would move a service's first account, and service order is
+    /// derived from exactly that position — the sidebar would reshuffle unpredictably.
+    private var selectedService: String? {
+        guard let issuer = selectedIssuer,
+              issuer != SettingsSelection.allAccounts,
+              issuer != SettingsSelection.general else { return nil }
+        return issuer
+    }
+
+    private func moveAccounts(from source: IndexSet, to destination: Int) {
+        guard let issuer = selectedService else { return }
+        let reordered = AccountOrdering.movingAccounts(
+            in: storageService.accounts, issuer: issuer, from: source, to: destination
+        )
+        try? storageService.reorder(to: reordered)
+    }
+
+    /// Drag-reordering the service rows rewrites the stored account order, which is
+    /// what the menu bar reads too.
+    private func moveIssuers(from source: IndexSet, to destination: Int) {
+        let reordered = AccountOrdering.movingIssuers(
+            in: storageService.accounts, from: source, to: destination
+        )
+        try? storageService.reorder(to: reordered)
+    }
+
     /// Shows what was just added: the service tab that covers all of it, with the
     /// first new account selected and scrolled into view.
     private func focus(on added: [Account]) {
@@ -235,6 +265,9 @@ struct SettingsView: View {
                 ForEach(issuers, id: \.self) { issuer in
                     Text(issuer)
                         .tag(issuer)
+                }
+                .onMove { source, destination in
+                    moveIssuers(from: source, to: destination)
                 }
             }
         }
