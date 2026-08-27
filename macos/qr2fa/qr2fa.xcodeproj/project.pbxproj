@@ -7,11 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		00BE6FF4D0EF6155C2958207 /* QRScannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4781F45EB3B937095BB61484 /* QRScannerTests.swift */; };
 		059EB15B7AFEEB0AB286C211 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E55E50489931E956CD012135 /* OnboardingView.swift */; };
 		05D51B269ABE036A6F355C5E /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4506FFA3EC262CFA7C739475 /* StorageService.swift */; };
 		0CC3A6BA472527E06CC133D0 /* AccountMenuItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED616089CB032DBD46721CF3 /* AccountMenuItemView.swift */; };
 		0F36F3866A221AA37520A4B8 /* TOTPGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93979A9D062AA2E1A03EDB8 /* TOTPGenerator.swift */; };
-		11A3598F5D47835AA6D56A2D /* QRCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8991D1C6B65A5866C508761B /* QRCaptureView.swift */; };
 		128B2AA2B01CF60772055C26 /* FileWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB705C1DD7C7B18A51F43252 /* FileWatcher.swift */; };
 		24661C89CBFEFD21E7A1AF12 /* Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48BA6FC6E5EEE8F9646710E /* Account.swift */; };
 		28774D9D0EDE559F0F2C2CF1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C58CE58E6B1EF7F69F2209ED /* Assets.xcassets */; };
@@ -19,9 +19,12 @@
 		2EEC3DDC5B097D0098F996FF /* AccountAddSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AB1D750F031A942255E35D2 /* AccountAddSheet.swift */; };
 		39DF4692F4AE86FD27669C12 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9DD71DAB18DB4EE4D3E34774 /* Vision.framework */; };
 		431D0751870D9150464587F1 /* AccountDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51747644CDE502D030DE373 /* AccountDetailView.swift */; };
+		4C91604799C91D1818879AA5 /* ScreenSelectionCaptureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C255E60D819764E1187B5A /* ScreenSelectionCaptureTests.swift */; };
+		50F67C38274A2502AEFE9852 /* ScreenSelectionCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2EEF5DFFA24C86823A21033 /* ScreenSelectionCapture.swift */; };
 		648AB564F78936D88854AE4E /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD851DCBE300C66BEFF8E74A /* SettingsView.swift */; };
 		7B6B3BA9B9D4077264D6B0FA /* StorageServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88408CF5542FBCAEF73C53B3 /* StorageServiceTests.swift */; };
 		7FE8CA66039854ED9C1164F3 /* StorageLocationDecision.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31B36FFCF5D8071F254BF6A0 /* StorageLocationDecision.swift */; };
+		8077C1A89B2075ACDBAD77FF /* QRScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6E1CA5A011314EBD85E5330 /* QRScanner.swift */; };
 		8ED0FFD516027E3C484C1644 /* TagBadgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33F56D427AB567C03D066E2E /* TagBadgeView.swift */; };
 		94201FB9B05FC82B3E2DD2C2 /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F18F2A75E8D589092F833454 /* GeneralSettingsView.swift */; };
 		9C05264088E598FCAC8E2579 /* PlaceholderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C1FA115DCA7679BDAA7781C /* PlaceholderTests.swift */; };
@@ -58,20 +61,23 @@
 		33F56D427AB567C03D066E2E /* TagBadgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagBadgeView.swift; sourceTree = "<group>"; };
 		41B2928875C704AF8919B743 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		4506FFA3EC262CFA7C739475 /* StorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
+		4781F45EB3B937095BB61484 /* QRScannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerTests.swift; sourceTree = "<group>"; };
 		4C0C1542EA75DD7AC6ED065A /* ScreenCaptureKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ScreenCaptureKit.framework; path = System/Library/Frameworks/ScreenCaptureKit.framework; sourceTree = SDKROOT; };
 		4F4651FD4AF46A8B228B1D51 /* qr2fa.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = qr2fa.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7C1FA115DCA7679BDAA7781C /* PlaceholderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderTests.swift; sourceTree = "<group>"; };
 		88408CF5542FBCAEF73C53B3 /* StorageServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageServiceTests.swift; sourceTree = "<group>"; };
-		8991D1C6B65A5866C508761B /* QRCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCaptureView.swift; sourceTree = "<group>"; };
 		8AB1D750F031A942255E35D2 /* AccountAddSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountAddSheet.swift; sourceTree = "<group>"; };
 		8E3780EDA60632058320D35C /* qr2faApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = qr2faApp.swift; sourceTree = "<group>"; };
 		9DD71DAB18DB4EE4D3E34774 /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Vision.framework; path = System/Library/Frameworks/Vision.framework; sourceTree = SDKROOT; };
 		AB705C1DD7C7B18A51F43252 /* FileWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcher.swift; sourceTree = "<group>"; };
 		AD851DCBE300C66BEFF8E74A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		B2EEF5DFFA24C86823A21033 /* ScreenSelectionCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenSelectionCapture.swift; sourceTree = "<group>"; };
 		C58CE58E6B1EF7F69F2209ED /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		C6E1CA5A011314EBD85E5330 /* QRScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScanner.swift; sourceTree = "<group>"; };
 		D48BA6FC6E5EEE8F9646710E /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
 		D93979A9D062AA2E1A03EDB8 /* TOTPGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TOTPGenerator.swift; sourceTree = "<group>"; };
 		DE7F2F57AE6BE17E4212AD3C /* StorageLocationSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageLocationSupport.swift; sourceTree = "<group>"; };
+		E1C255E60D819764E1187B5A /* ScreenSelectionCaptureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenSelectionCaptureTests.swift; sourceTree = "<group>"; };
 		E51747644CDE502D030DE373 /* AccountDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDetailView.swift; sourceTree = "<group>"; };
 		E55E50489931E956CD012135 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		E70A129B0D600674D2913C90 /* AccountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTests.swift; sourceTree = "<group>"; };
@@ -102,7 +108,6 @@
 				AC6AE969CAD16FC5F8710A8D /* Settings */,
 				E51747644CDE502D030DE373 /* AccountDetailView.swift */,
 				ED616089CB032DBD46721CF3 /* AccountMenuItemView.swift */,
-				8991D1C6B65A5866C508761B /* QRCaptureView.swift */,
 				DE7F2F57AE6BE17E4212AD3C /* StorageLocationSupport.swift */,
 			);
 			path = Views;
@@ -132,6 +137,8 @@
 				F0E135F4E552E94FC512DA96 /* AccountMenuItemLayoutTests.swift */,
 				E70A129B0D600674D2913C90 /* AccountTests.swift */,
 				7C1FA115DCA7679BDAA7781C /* PlaceholderTests.swift */,
+				4781F45EB3B937095BB61484 /* QRScannerTests.swift */,
+				E1C255E60D819764E1187B5A /* ScreenSelectionCaptureTests.swift */,
 				05576E86F1D49A7E9498DD19 /* StorageLocationDecisionTests.swift */,
 				88408CF5542FBCAEF73C53B3 /* StorageServiceTests.swift */,
 				03F34D82B7A1BCF1EC6B7E15 /* TOTPGeneratorTests.swift */,
@@ -206,6 +213,8 @@
 			children = (
 				AB705C1DD7C7B18A51F43252 /* FileWatcher.swift */,
 				0811B5A5C86579A6EB9AA6B5 /* MigrationParser.swift */,
+				C6E1CA5A011314EBD85E5330 /* QRScanner.swift */,
+				B2EEF5DFFA24C86823A21033 /* ScreenSelectionCapture.swift */,
 				31B36FFCF5D8071F254BF6A0 /* StorageLocationDecision.swift */,
 				4506FFA3EC262CFA7C739475 /* StorageService.swift */,
 				D93979A9D062AA2E1A03EDB8 /* TOTPGenerator.swift */,
@@ -311,7 +320,8 @@
 				94201FB9B05FC82B3E2DD2C2 /* GeneralSettingsView.swift in Sources */,
 				2EA60BDF68A4B9EC16138E37 /* MigrationParser.swift in Sources */,
 				059EB15B7AFEEB0AB286C211 /* OnboardingView.swift in Sources */,
-				11A3598F5D47835AA6D56A2D /* QRCaptureView.swift in Sources */,
+				8077C1A89B2075ACDBAD77FF /* QRScanner.swift in Sources */,
+				50F67C38274A2502AEFE9852 /* ScreenSelectionCapture.swift in Sources */,
 				648AB564F78936D88854AE4E /* SettingsView.swift in Sources */,
 				7FE8CA66039854ED9C1164F3 /* StorageLocationDecision.swift in Sources */,
 				C08CA2EF2820FF0A78F25B63 /* StorageLocationSupport.swift in Sources */,
@@ -329,6 +339,8 @@
 				C15851DD242D5AE13B4300A0 /* AccountMenuItemLayoutTests.swift in Sources */,
 				AF409432B44BF07BDB5A9B04 /* AccountTests.swift in Sources */,
 				9C05264088E598FCAC8E2579 /* PlaceholderTests.swift in Sources */,
+				00BE6FF4D0EF6155C2958207 /* QRScannerTests.swift in Sources */,
+				4C91604799C91D1818879AA5 /* ScreenSelectionCaptureTests.swift in Sources */,
 				DF09CA7F06203CC0EE68C681 /* StorageLocationDecisionTests.swift in Sources */,
 				7B6B3BA9B9D4077264D6B0FA /* StorageServiceTests.swift in Sources */,
 				DF4A30EE2A5DE5D37A3EC2A7 /* TOTPGeneratorTests.swift in Sources */,

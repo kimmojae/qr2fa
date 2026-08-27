@@ -6,7 +6,7 @@ struct AccountAddSheet: View {
 
     enum Tab { case qr, manual }
     @State private var tab: Tab = .qr
-    @State private var showingQRCapture = false
+    @State private var isScanning = false
 
     // Single-account QR state
     @State private var parsedAccount: Account?
@@ -81,13 +81,6 @@ struct AccountAddSheet: View {
             .padding(.vertical, 12)
         }
         .frame(width: 460)
-        .sheet(isPresented: $showingQRCapture) {
-            QRCaptureView { urlString in
-                handleCapturedURL(urlString)
-                showingQRCapture = false
-            }
-            .environment(storageService)
-        }
     }
 
     // MARK: - QR Pane
@@ -96,10 +89,7 @@ struct AccountAddSheet: View {
         VStack(spacing: 16) {
             // Scan button
             Button {
-                parsedAccount = nil
-                migrationAccounts = []
-                errorMessage = nil
-                showingQRCapture = true
+                Task { await scanScreen() }
             } label: {
                 VStack(spacing: 8) {
                     Image(systemName: "qrcode.viewfinder")
@@ -107,7 +97,7 @@ struct AccountAddSheet: View {
                         .foregroundStyle(.secondary)
                     Text("화면에서 QR 캡처")
                         .font(.system(size: 13, weight: .medium))
-                    Text("클릭하면 화면 선택 모드 진입")
+                    Text("클릭한 뒤 QR 영역을 드래그하세요")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 }
@@ -118,6 +108,7 @@ struct AccountAddSheet: View {
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.accentColor.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [5])))
             }
             .buttonStyle(.plain)
+            .disabled(isScanning)
 
             // Migration preview
             if !migrationAccounts.isEmpty {
@@ -255,6 +246,36 @@ struct AccountAddSheet: View {
             return !migrationAccounts.filter({ !$0.skip }).isEmpty || parsedAccount != nil
         case .manual:
             return !name.isEmpty && !secret.isEmpty
+        }
+    }
+
+    /// Hands the screen over to the system crosshair and feeds whatever comes back
+    /// into the same handler as a pasted URL.
+    @MainActor
+    private func scanScreen() async {
+        guard !isScanning else { return }
+        isScanning = true
+        defer { isScanning = false }
+
+        parsedAccount = nil
+        migrationAccounts = []
+        errorMessage = nil
+
+        do {
+            guard let image = try await ScreenSelectionCapture.selectRegion() else {
+                return  // Escape during selection — backing out is not an error.
+            }
+            let urls = try await QRScanner.otpauthURLs(in: image)
+            switch urls.count {
+            case 0:
+                errorMessage = "선택한 영역에서 QR 코드를 찾을 수 없습니다"
+            case 1:
+                handleCapturedURL(urls[0])
+            default:
+                errorMessage = "선택한 영역에 QR 코드가 \(urls.count)개 있습니다 — 하나만 선택하세요"
+            }
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
