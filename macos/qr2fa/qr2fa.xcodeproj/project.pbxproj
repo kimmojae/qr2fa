@@ -16,6 +16,7 @@
 		24661C89CBFEFD21E7A1AF12 /* Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48BA6FC6E5EEE8F9646710E /* Account.swift */; };
 		28774D9D0EDE559F0F2C2CF1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C58CE58E6B1EF7F69F2209ED /* Assets.xcassets */; };
 		288370D08795AABB8552674A /* AccountOrderingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAB9F25EE332006A0BAC4944 /* AccountOrderingTests.swift */; };
+		2BE5D7C4CCC9581757733EC8 /* VaultCrypto.swift in Sources */ = {isa = PBXBuildFile; fileRef = C25FD93D3ACE6329DCABA7CA /* VaultCrypto.swift */; };
 		2EA60BDF68A4B9EC16138E37 /* MigrationParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0811B5A5C86579A6EB9AA6B5 /* MigrationParser.swift */; };
 		2EEC3DDC5B097D0098F996FF /* AccountAddSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AB1D750F031A942255E35D2 /* AccountAddSheet.swift */; };
 		39DF4692F4AE86FD27669C12 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9DD71DAB18DB4EE4D3E34774 /* Vision.framework */; };
@@ -39,6 +40,7 @@
 		CE6043988BF08494C558F41D /* qr2faApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E3780EDA60632058320D35C /* qr2faApp.swift */; };
 		DF09CA7F06203CC0EE68C681 /* StorageLocationDecisionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05576E86F1D49A7E9498DD19 /* StorageLocationDecisionTests.swift */; };
 		DF4A30EE2A5DE5D37A3EC2A7 /* TOTPGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03F34D82B7A1BCF1EC6B7E15 /* TOTPGeneratorTests.swift */; };
+		E00059D02C89999FBF5FB1C4 /* VaultCryptoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C9A9BD553BC4B3FDA9AE97F /* VaultCryptoTests.swift */; };
 		EF6C5878EBC05F6906980FAC /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 41B2928875C704AF8919B743 /* AppIcon.icon */; };
 		F13C18495B9C7F7CDE480C7E /* AccountOrdering.swift in Sources */ = {isa = PBXBuildFile; fileRef = 838F4B9523D47873ACDED621 /* AccountOrdering.swift */; };
 		FCF51A7378F98C134BBD1B5F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 224EF6A8A2A51266EA1F4497 /* AppDelegate.swift */; };
@@ -75,11 +77,13 @@
 		88408CF5542FBCAEF73C53B3 /* StorageServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageServiceTests.swift; sourceTree = "<group>"; };
 		8AB1D750F031A942255E35D2 /* AccountAddSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountAddSheet.swift; sourceTree = "<group>"; };
 		8E3780EDA60632058320D35C /* qr2faApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = qr2faApp.swift; sourceTree = "<group>"; };
+		9C9A9BD553BC4B3FDA9AE97F /* VaultCryptoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultCryptoTests.swift; sourceTree = "<group>"; };
 		9DD71DAB18DB4EE4D3E34774 /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Vision.framework; path = System/Library/Frameworks/Vision.framework; sourceTree = SDKROOT; };
 		AAB9F25EE332006A0BAC4944 /* AccountOrderingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountOrderingTests.swift; sourceTree = "<group>"; };
 		AB705C1DD7C7B18A51F43252 /* FileWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcher.swift; sourceTree = "<group>"; };
 		AD851DCBE300C66BEFF8E74A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		B2EEF5DFFA24C86823A21033 /* ScreenSelectionCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenSelectionCapture.swift; sourceTree = "<group>"; };
+		C25FD93D3ACE6329DCABA7CA /* VaultCrypto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultCrypto.swift; sourceTree = "<group>"; };
 		C58CE58E6B1EF7F69F2209ED /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C6E1CA5A011314EBD85E5330 /* QRScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScanner.swift; sourceTree = "<group>"; };
 		D48BA6FC6E5EEE8F9646710E /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
@@ -129,6 +133,14 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
+		23B046FE453769DFB705BA9E /* Vault */ = {
+			isa = PBXGroup;
+			children = (
+				C25FD93D3ACE6329DCABA7CA /* VaultCrypto.swift */,
+			);
+			path = Vault;
+			sourceTree = "<group>";
+		};
 		2D1030A84805D0B7659D05D9 = {
 			isa = PBXGroup;
 			children = (
@@ -153,6 +165,7 @@
 				05576E86F1D49A7E9498DD19 /* StorageLocationDecisionTests.swift */,
 				88408CF5542FBCAEF73C53B3 /* StorageServiceTests.swift */,
 				03F34D82B7A1BCF1EC6B7E15 /* TOTPGeneratorTests.swift */,
+				9C9A9BD553BC4B3FDA9AE97F /* VaultCryptoTests.swift */,
 			);
 			path = qr2faTests;
 			sourceTree = "<group>";
@@ -222,6 +235,7 @@
 		F4DA86E0B2E1F31AD5FD847F /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				23B046FE453769DFB705BA9E /* Vault */,
 				838F4B9523D47873ACDED621 /* AccountOrdering.swift */,
 				AB705C1DD7C7B18A51F43252 /* FileWatcher.swift */,
 				0811B5A5C86579A6EB9AA6B5 /* MigrationParser.swift */,
@@ -341,6 +355,7 @@
 				05D51B269ABE036A6F355C5E /* StorageService.swift in Sources */,
 				0F36F3866A221AA37520A4B8 /* TOTPGenerator.swift in Sources */,
 				8ED0FFD516027E3C484C1644 /* TagBadgeView.swift in Sources */,
+				2BE5D7C4CCC9581757733EC8 /* VaultCrypto.swift in Sources */,
 				CE6043988BF08494C558F41D /* qr2faApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -360,6 +375,7 @@
 				DF09CA7F06203CC0EE68C681 /* StorageLocationDecisionTests.swift in Sources */,
 				7B6B3BA9B9D4077264D6B0FA /* StorageServiceTests.swift in Sources */,
 				DF4A30EE2A5DE5D37A3EC2A7 /* TOTPGeneratorTests.swift in Sources */,
+				E00059D02C89999FBF5FB1C4 /* VaultCryptoTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
