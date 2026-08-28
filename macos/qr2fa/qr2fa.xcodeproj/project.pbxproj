@@ -21,9 +21,11 @@
 		2EEC3DDC5B097D0098F996FF /* AccountAddSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AB1D750F031A942255E35D2 /* AccountAddSheet.swift */; };
 		39DF4692F4AE86FD27669C12 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9DD71DAB18DB4EE4D3E34774 /* Vision.framework */; };
 		431D0751870D9150464587F1 /* AccountDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51747644CDE502D030DE373 /* AccountDetailView.swift */; };
+		483CC159D01A740D9BFF80F2 /* KeyStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C48CBADBE52699AE8BB50320 /* KeyStoreTests.swift */; };
 		4C91604799C91D1818879AA5 /* ScreenSelectionCaptureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C255E60D819764E1187B5A /* ScreenSelectionCaptureTests.swift */; };
 		50F67C38274A2502AEFE9852 /* ScreenSelectionCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2EEF5DFFA24C86823A21033 /* ScreenSelectionCapture.swift */; };
 		648AB564F78936D88854AE4E /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD851DCBE300C66BEFF8E74A /* SettingsView.swift */; };
+		7408582223DAB7C7F6ECBFE7 /* KeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C581651BE5F9C092A7914391 /* KeyStore.swift */; };
 		77E47F09AF1FF7A662085E71 /* AddedAccountFocusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 282F63F389212082BB46DC05 /* AddedAccountFocusTests.swift */; };
 		7B6B3BA9B9D4077264D6B0FA /* StorageServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88408CF5542FBCAEF73C53B3 /* StorageServiceTests.swift */; };
 		7FE8CA66039854ED9C1164F3 /* StorageLocationDecision.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31B36FFCF5D8071F254BF6A0 /* StorageLocationDecision.swift */; };
@@ -84,6 +86,8 @@
 		AD851DCBE300C66BEFF8E74A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		B2EEF5DFFA24C86823A21033 /* ScreenSelectionCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenSelectionCapture.swift; sourceTree = "<group>"; };
 		C25FD93D3ACE6329DCABA7CA /* VaultCrypto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultCrypto.swift; sourceTree = "<group>"; };
+		C48CBADBE52699AE8BB50320 /* KeyStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyStoreTests.swift; sourceTree = "<group>"; };
+		C581651BE5F9C092A7914391 /* KeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyStore.swift; sourceTree = "<group>"; };
 		C58CE58E6B1EF7F69F2209ED /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C6E1CA5A011314EBD85E5330 /* QRScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScanner.swift; sourceTree = "<group>"; };
 		D48BA6FC6E5EEE8F9646710E /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
@@ -136,6 +140,7 @@
 		23B046FE453769DFB705BA9E /* Vault */ = {
 			isa = PBXGroup;
 			children = (
+				C581651BE5F9C092A7914391 /* KeyStore.swift */,
 				C25FD93D3ACE6329DCABA7CA /* VaultCrypto.swift */,
 			);
 			path = Vault;
@@ -159,6 +164,7 @@
 				E70A129B0D600674D2913C90 /* AccountTests.swift */,
 				282F63F389212082BB46DC05 /* AddedAccountFocusTests.swift */,
 				1FF1C6BC605904C7E5ADFB69 /* DeleteConfirmationTests.swift */,
+				C48CBADBE52699AE8BB50320 /* KeyStoreTests.swift */,
 				7C1FA115DCA7679BDAA7781C /* PlaceholderTests.swift */,
 				4781F45EB3B937095BB61484 /* QRScannerTests.swift */,
 				E1C255E60D819764E1187B5A /* ScreenSelectionCaptureTests.swift */,
@@ -345,6 +351,7 @@
 				A2FA9D8DC44B2A368EE153B2 /* AppInfo.swift in Sources */,
 				128B2AA2B01CF60772055C26 /* FileWatcher.swift in Sources */,
 				94201FB9B05FC82B3E2DD2C2 /* GeneralSettingsView.swift in Sources */,
+				7408582223DAB7C7F6ECBFE7 /* KeyStore.swift in Sources */,
 				2EA60BDF68A4B9EC16138E37 /* MigrationParser.swift in Sources */,
 				059EB15B7AFEEB0AB286C211 /* OnboardingView.swift in Sources */,
 				8077C1A89B2075ACDBAD77FF /* QRScanner.swift in Sources */,
@@ -369,6 +376,7 @@
 				AF409432B44BF07BDB5A9B04 /* AccountTests.swift in Sources */,
 				77E47F09AF1FF7A662085E71 /* AddedAccountFocusTests.swift in Sources */,
 				9AEB0089BBF5603798FF3547 /* DeleteConfirmationTests.swift in Sources */,
+				483CC159D01A740D9BFF80F2 /* KeyStoreTests.swift in Sources */,
 				9C05264088E598FCAC8E2579 /* PlaceholderTests.swift in Sources */,
 				00BE6FF4D0EF6155C2958207 /* QRScannerTests.swift in Sources */,
 				4C91604799C91D1818879AA5 /* ScreenSelectionCaptureTests.swift in Sources */,
