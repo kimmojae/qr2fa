@@ -16,13 +16,30 @@ final class StorageService {
     /// 쓰지 않도록 갈아끼울 수 있어야 한다.
     let defaultDirectory: String
 
+    /// 저장 파일을 읽을 수 있는 상태인지.
+    ///
+    /// 지금까지는 "파일이 없으면 빈 목록, 그 외엔 항상 읽힘"이었다. 암호화 후에는
+    /// **파일은 멀쩡한데 키가 없는** 상태가 생기고, 이걸 빈 목록과 구별하지 못하면
+    /// 그 위에 저장하는 순간 파일이 실제로 비워진다.
+    enum VaultState: Equatable {
+        case unlocked
+        case locked                  // 파일은 있는데 키가 없다
+        case needsMigration          // v1 평문 파일이 있다
+        case unreadable(String)      // 손상, 모르는 version, 복호화 실패
+    }
+
+    private(set) var state: VaultState = .unlocked
+    private let keyStore: KeyStore
+
     init(
         path: String? = nil,
         defaults: UserDefaults = .standard,
-        defaultDirectory: String = StorageService.localDefaultDirectory()
+        defaultDirectory: String = StorageService.localDefaultDirectory(),
+        keyStore: KeyStore = KeychainKeyStore()
     ) {
         self.defaults = defaults
         self.defaultDirectory = defaultDirectory
+        self.keyStore = keyStore
         self.storagePath = path ?? StorageService.resolveDefaultPath(defaults: defaults)
         startFileWatcher()
     }

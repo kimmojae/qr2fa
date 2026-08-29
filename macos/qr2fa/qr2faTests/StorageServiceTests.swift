@@ -19,14 +19,36 @@ final class StorageServiceTests: XCTestCase {
         super.tearDown()
     }
 
+    /// 테스트용 서비스. 실제 Keychain을 절대 건드리지 않는다.
+    private func makeService(
+        path: String? = nil,
+        defaults: UserDefaults? = nil,
+        defaultDirectory: String? = nil,
+        keyStore: KeyStore = InMemoryKeyStore()
+    ) -> StorageService {
+        StorageService(
+            path: path ?? tempPath,
+            defaults: defaults ?? UserDefaults(suiteName: UUID().uuidString)!,
+            defaultDirectory: defaultDirectory ?? URL(fileURLWithPath: tempPath)
+                .deletingLastPathComponent().path,
+            keyStore: keyStore
+        )
+    }
+
+    func test_defaultStateIsUnlocked() throws {
+        let service = makeService()
+        try service.load()
+        XCTAssertEqual(service.state, .unlocked)
+    }
+
     func test_loadEmptyWhenFileAbsent() throws {
-        let service = StorageService(path: tempPath)
+        let service = makeService(path: tempPath)
         try service.load()
         XCTAssertTrue(service.accounts.isEmpty)
     }
 
     func test_addAndPersist() throws {
-        let service = StorageService(path: tempPath)
+        let service = makeService(path: tempPath)
         try service.load()
 
         let account = Account(
@@ -42,14 +64,14 @@ final class StorageServiceTests: XCTestCase {
         XCTAssertEqual(service.accounts[0].issuer, "GitHub")
 
         // Reload from disk — verify persistence
-        let service2 = StorageService(path: tempPath)
+        let service2 = makeService(path: tempPath)
         try service2.load()
         XCTAssertEqual(service2.accounts.count, 1)
         XCTAssertEqual(service2.accounts[0].issuer, "GitHub")
     }
 
     func test_update() throws {
-        let service = StorageService(path: tempPath)
+        let service = makeService(path: tempPath)
         try service.load()
 
         let account = Account(
@@ -67,7 +89,7 @@ final class StorageServiceTests: XCTestCase {
     }
 
     func test_delete() throws {
-        let service = StorageService(path: tempPath)
+        let service = makeService(path: tempPath)
         try service.load()
 
         let account = Account(
@@ -101,7 +123,7 @@ final class StorageServiceTests: XCTestCase {
         """
         try json.write(toFile: tempPath, atomically: true, encoding: .utf8)
 
-        let service = StorageService(path: tempPath)
+        let service = makeService(path: tempPath)
         try service.load()
 
         XCTAssertEqual(service.accounts.count, 1)
@@ -110,7 +132,7 @@ final class StorageServiceTests: XCTestCase {
     }
 
     func test_updateNonexistent_throws() throws {
-        let service = StorageService(path: tempPath)
+        let service = makeService(path: tempPath)
         try service.load()
 
         let nonexistent = Account(
@@ -134,21 +156,21 @@ final class StorageServiceTests: XCTestCase {
 
     func test_needsLocationChoice_trueWhenKeyAbsent() {
         let defaults = makeDefaults()
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         XCTAssertTrue(service.needsLocationChoice)
     }
 
     func test_needsLocationChoice_trueWhenKeyEmpty() {
         let defaults = makeDefaults()
         defaults.set("", forKey: StorageService.storageDirectoryKey)
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         XCTAssertTrue(service.needsLocationChoice)
     }
 
     func test_needsLocationChoice_falseWhenKeyPresent() {
         let defaults = makeDefaults()
         defaults.set("/tmp/whatever", forKey: StorageService.storageDirectoryKey)
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         XCTAssertFalse(service.needsLocationChoice)
     }
 
@@ -209,7 +231,7 @@ final class StorageServiceTests: XCTestCase {
         // 임시 경로에도 다른 파일이 있는 상태(온보딩을 닫고 계정을 추가한 경우)
         try writeStorage(at: tempPath, issuer: "ProvisionalService")
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         try service.commitInitialLocation(directory: targetDir)
 
         XCTAssertEqual(service.storagePath, "\(targetDir)/accounts.json")
@@ -225,7 +247,7 @@ final class StorageServiceTests: XCTestCase {
         let targetDir = makeTempDir()
         try writeStorage(at: tempPath, issuer: "ProvisionalService")
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         try service.commitInitialLocation(directory: targetDir)
 
         XCTAssertEqual(service.accounts.first?.issuer, "ProvisionalService")
@@ -236,7 +258,7 @@ final class StorageServiceTests: XCTestCase {
         let defaults = makeDefaults()
         let targetDir = makeTempDir()
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         try service.commitInitialLocation(directory: targetDir)
 
         XCTAssertTrue(service.accounts.isEmpty)
@@ -247,7 +269,7 @@ final class StorageServiceTests: XCTestCase {
         let defaults = makeDefaults()
         let targetDir = makeTempDir()
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         try service.commitInitialLocation(directory: targetDir)
 
         XCTAssertEqual(defaults.string(forKey: StorageService.storageDirectoryKey), targetDir)
@@ -264,7 +286,7 @@ final class StorageServiceTests: XCTestCase {
         try writeStorage(at: "\(targetDir)/accounts.json", issuer: "TargetService")
         try writeStorage(at: tempPath, issuer: "ProvisionalService")
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         let outcome = try service.commitInitialLocation(directory: targetDir)
 
         // 예정대로 된 일은 알리지 않는다.
@@ -285,7 +307,7 @@ final class StorageServiceTests: XCTestCase {
         let targetDir = makeTempDir()
         try writeStorage(at: tempPath, issuer: "ProvisionalService")
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         let outcome = try service.commitInitialLocation(directory: targetDir)
 
         XCTAssertFalse(outcome.hasNotice)
@@ -301,7 +323,7 @@ final class StorageServiceTests: XCTestCase {
             toFile: "\(targetDir)/accounts.json", atomically: true, encoding: .utf8
         )
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         let outcome = try service.commitInitialLocation(directory: targetDir)
 
         XCTAssertNotNil(outcome.loadError)
@@ -321,7 +343,7 @@ final class StorageServiceTests: XCTestCase {
         try writeStorage(at: target, issuer: "TargetService")
         try writeStorage(at: tempPath, issuer: "CurrentService")
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         try service.load()
         let outcome = try service.changePath(to: target, strategy: .copyCurrent)
 
@@ -334,7 +356,7 @@ final class StorageServiceTests: XCTestCase {
         XCTAssertEqual(
             StorageService.inspectFile(at: backupPath), .accounts(count: 1)
         )
-        let restored = StorageService(path: backupPath, defaults: makeDefaults())
+        let restored = makeService(path: backupPath, defaults: makeDefaults())
         try restored.load()
         XCTAssertEqual(restored.accounts.first?.issuer, "TargetService")
     }
@@ -348,7 +370,7 @@ final class StorageServiceTests: XCTestCase {
         try writeStorage(at: target, issuer: "TargetService")
         try writeStorage(at: tempPath, issuer: "CurrentService")
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         try service.load()
         let outcome = try service.changePath(to: target, strategy: .adoptTarget)
 
@@ -365,7 +387,7 @@ final class StorageServiceTests: XCTestCase {
         let targetDir = makeTempDir()
         try writeStorage(at: tempPath, issuer: "CurrentService")
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         try service.load()
         try service.changePath(to: "\(targetDir)/accounts.json", strategy: .copyCurrent)
 
@@ -379,7 +401,7 @@ final class StorageServiceTests: XCTestCase {
         let defaults = makeDefaults()
         try writeStorage(at: tempPath, issuer: "CurrentService")
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         let outcome = try service.changePath(to: tempPath, strategy: .copyCurrent)
 
         XCTAssertFalse(outcome.hasNotice)
@@ -412,7 +434,7 @@ final class StorageServiceTests: XCTestCase {
         let targetDir = makeTempDir()
         let defaultDir = makeTempDir()
 
-        let service = StorageService(
+        let service = makeService(
             path: tempPath, defaults: defaults, defaultDirectory: defaultDir
         )
         try service.commitInitialLocation(directory: targetDir)
@@ -430,7 +452,7 @@ final class StorageServiceTests: XCTestCase {
         let defaultDir = makeTempDir()   // 비어 있는 기본 폴더
         try writeStorage(at: "\(iCloudDir)/accounts.json", issuer: "ICloudService")
 
-        let service = StorageService(
+        let service = makeService(
             path: "\(iCloudDir)/accounts.json", defaults: defaults, defaultDirectory: defaultDir
         )
         try service.load()
@@ -450,7 +472,7 @@ final class StorageServiceTests: XCTestCase {
         try writeStorage(at: "\(iCloudDir)/accounts.json", issuer: "ICloudService")
         try writeStorage(at: "\(defaultDir)/accounts.json", issuer: "ReRegistered")
 
-        let service = StorageService(
+        let service = makeService(
             path: "\(iCloudDir)/accounts.json", defaults: defaults, defaultDirectory: defaultDir
         )
         try service.load()
@@ -473,7 +495,7 @@ final class StorageServiceTests: XCTestCase {
         try "{ not json".write(toFile: target, atomically: true, encoding: .utf8)
         try writeStorage(at: tempPath, issuer: "CurrentService")
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         try service.load()
         let outcome = try service.changePath(to: target, strategy: .adoptTarget)
 
@@ -493,7 +515,7 @@ final class StorageServiceTests: XCTestCase {
         try "{ not json".write(toFile: target, atomically: true, encoding: .utf8)
         try writeStorage(at: tempPath, issuer: "CurrentService")
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         try service.load()
         // 외부에서 현재 파일이 사라진 상황 (메모리의 계정은 살아 있다)
         try FileManager.default.removeItem(atPath: tempPath)
@@ -517,7 +539,7 @@ final class StorageServiceTests: XCTestCase {
         try writeStorage(at: target, issuer: "TargetService")
         try writeStorage(at: tempPath, issuer: "CurrentService")
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         try service.load()
 
         // 대상 폴더를 읽기 전용으로 만들어 복사를 실패시킨다.
@@ -555,7 +577,7 @@ final class StorageServiceTests: XCTestCase {
             try? fm.setAttributes([.immutable: false], ofItemAtPath: target)
         }
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         try service.load()
 
         XCTAssertThrowsError(try service.changePath(to: target, strategy: .copyCurrent))
@@ -572,7 +594,7 @@ final class StorageServiceTests: XCTestCase {
         let targetDir = makeTempDir()
         try writeStorage(at: tempPath, issuer: "CurrentService")
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         try service.load()
         try service.changePath(to: "\(targetDir)/accounts.json", strategy: .copyCurrent)
 
@@ -588,7 +610,7 @@ final class StorageServiceTests: XCTestCase {
         let targetDir = makeTempDir()
         try writeStorage(at: tempPath, issuer: "CurrentService")
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         try service.load()
         let outcome = try service.changePath(
             to: "\(targetDir)/accounts.json", strategy: .copyCurrent
@@ -612,7 +634,7 @@ final class StorageServiceTests: XCTestCase {
         try writeStorage(at: tempPath, issuer: "CurrentService")
         try writeStorage(at: "\(targetDir)/accounts.json", issuer: "TargetService")
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         try service.load()
         let outcome = try service.changePath(
             to: "\(targetDir)/accounts.json", strategy: .adoptTarget
@@ -628,7 +650,7 @@ final class StorageServiceTests: XCTestCase {
         let defaults = makeDefaults()
         let targetDir = makeTempDir()
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         try service.load()
         let outcome = try service.changePath(
             to: "\(targetDir)/accounts.json", strategy: .copyCurrent
@@ -735,7 +757,7 @@ final class StorageServiceTests: XCTestCase {
     /// 내용이 평문 TOTP 시크릿이라 앱이 새로 만드는 파일은 소유자 전용이어야 한다.
     func test_save_createsOwnerOnlyFile() throws {
         let path = "\(makeTempDir())/fresh/accounts.json"
-        let service = StorageService(path: path, defaults: makeDefaults())
+        let service = makeService(path: path, defaults: makeDefaults())
         try service.add(makeAccount())
 
         XCTAssertEqual(try permissions(of: path), 0o600)
@@ -745,7 +767,7 @@ final class StorageServiceTests: XCTestCase {
     /// FileWatcher라, save()만 고쳐서는 잡히지 않는 경로다.
     func test_save_createsOwnerOnlyDirectory() throws {
         let dir = "\(makeTempDir())/fresh"
-        let service = StorageService(path: "\(dir)/accounts.json", defaults: makeDefaults())
+        let service = makeService(path: "\(dir)/accounts.json", defaults: makeDefaults())
         try service.add(makeAccount())
 
         XCTAssertEqual(try permissions(of: dir), 0o700)
@@ -755,7 +777,7 @@ final class StorageServiceTests: XCTestCase {
     func test_save_leavesNoLooseTempFile() throws {
         let dir = "\(makeTempDir())/fresh"
         let path = "\(dir)/accounts.json"
-        let service = StorageService(path: path, defaults: makeDefaults())
+        let service = makeService(path: path, defaults: makeDefaults())
         try service.add(makeAccount())
 
         let leftovers = try FileManager.default.contentsOfDirectory(atPath: dir)
@@ -769,7 +791,7 @@ final class StorageServiceTests: XCTestCase {
             atPath: path, contents: Data("{}".utf8), attributes: [.posixPermissions: 0o644]
         ))
 
-        let service = StorageService(path: path, defaults: makeDefaults())
+        let service = makeService(path: path, defaults: makeDefaults())
         try service.add(makeAccount())
 
         XCTAssertEqual(try permissions(of: path), 0o644)
@@ -783,7 +805,7 @@ final class StorageServiceTests: XCTestCase {
         try writeStorage(at: tempPath, issuer: "CurrentService")
         try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: tempPath)
 
-        let service = StorageService(path: tempPath, defaults: defaults)
+        let service = makeService(path: tempPath, defaults: defaults)
         try service.load()
         try service.changePath(to: target, strategy: .copyCurrent)
 
@@ -793,7 +815,7 @@ final class StorageServiceTests: XCTestCase {
 
     func test_commitInitialLocation_createsOwnerOnlyDirectory() throws {
         let directory = "\(makeTempDir())/fresh"
-        let service = StorageService(path: tempPath, defaults: makeDefaults())
+        let service = makeService(path: tempPath, defaults: makeDefaults())
         try service.commitInitialLocation(directory: directory)
 
         XCTAssertEqual(try permissions(of: directory), 0o700)
@@ -823,7 +845,7 @@ final class StorageServiceTests: XCTestCase {
 extension StorageServiceTests {
 
     private func seeded() throws -> StorageService {
-        let service = StorageService(path: tempPath)
+        let service = makeService(path: tempPath)
         try service.load()
         for issuer in ["A", "B"] {
             try service.add(Account(
@@ -841,7 +863,7 @@ extension StorageServiceTests {
         try service.reorder(to: service.accounts.reversed())
         XCTAssertEqual(service.accounts.map(\.issuer), ["B", "A"])
 
-        let reloaded = StorageService(path: tempPath)
+        let reloaded = makeService(path: tempPath)
         try reloaded.load()
         XCTAssertEqual(reloaded.accounts.map(\.issuer), ["B", "A"])
     }
