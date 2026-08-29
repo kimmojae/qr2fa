@@ -81,6 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func observeAccounts() {
         withObservationTracking {
             _ = storageService.accounts
+            _ = storageService.state
         } onChange: { [weak self] in
             DispatchQueue.main.async {
                 self?.rebuildMenu()
@@ -92,6 +93,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func rebuildMenu() {
         submenuDelegates = []
         let menu = NSMenu()
+
+        switch storageService.state {
+        case .unlocked:
+            break   // 아래 기존 계정 항목 구성으로 진행
+        case .locked:
+            menu.addItem(withTitle: "잠김 — 계정 파일을 열 열쇠가 없습니다",
+                         action: nil, keyEquivalent: "")
+            menu.addItem(.separator())
+        case .needsMigration:
+            let item = NSMenuItem(title: "저장 방식을 암호화로 바꾸기…",
+                                  action: #selector(runMigration), keyEquivalent: "")
+            item.target = self
+            menu.addItem(item)
+            menu.addItem(.separator())
+        case .unreadable(let message):
+            menu.addItem(withTitle: message, action: nil, keyEquivalent: "")
+            menu.addItem(.separator())
+        }
 
         let groups = groupedAccounts()
 
@@ -205,6 +224,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func noOp() {}
+
+    @objc private func runMigration() {
+        do {
+            try storageService.migrateToEncrypted()
+            let alert = NSAlert()
+            alert.messageText = "계정 파일을 암호화했습니다"
+            alert.informativeText = """
+                열쇠는 이 Mac의 Keychain에 보관됩니다.
+
+                예전 평문 파일은 지우지 않고 남겨뒀습니다:
+                \(storageService.lastMigrationBackupPath ?? "-")
+
+                정상 동작을 확인한 뒤 직접 지우셔야 실제로 안전해집니다.
+                """
+            alert.runModal()
+        } catch {
+            let alert = NSAlert(error: error)
+            alert.runModal()
+        }
+    }
 }
 
 // MARK: - SubMenuDelegate
