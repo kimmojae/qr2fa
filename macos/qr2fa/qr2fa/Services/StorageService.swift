@@ -46,7 +46,14 @@ final class StorageService {
 
     private func startFileWatcher() {
         fileWatcher = FileWatcher(path: storagePath) { [weak self] in
-            try? self?.load()
+            guard let self else { return }
+            do {
+                try self.load()
+            } catch {
+                // 외부 변경을 읽지 못했다. 조용히 빈 화면이 되면 계정이 사라진 것처럼 보인다.
+                self.accounts = []
+                self.state = .unreadable(error.localizedDescription)
+            }
         }
     }
 
@@ -550,6 +557,7 @@ final class StorageService {
 
     @discardableResult
     func add(_ account: Account) throws -> Account {
+        guard state == .unlocked else { throw StorageError.vaultNotWritable }
         nextId += 1
         var acc = account
         acc.id = nextId
@@ -560,6 +568,7 @@ final class StorageService {
     }
 
     func update(_ account: Account) throws {
+        guard state == .unlocked else { throw StorageError.vaultNotWritable }
         guard let idx = accounts.firstIndex(where: { $0.id == account.id }) else {
             throw StorageError.accountNotFound
         }
@@ -568,6 +577,7 @@ final class StorageService {
     }
 
     func delete(id: Int) throws {
+        guard state == .unlocked else { throw StorageError.vaultNotWritable }
         accounts.removeAll { $0.id == id }
         try save()
     }
@@ -576,6 +586,7 @@ final class StorageService {
     /// reordering must never be a path that loses or duplicates an account, because
     /// the payload is unrecoverable TOTP secrets.
     func reorder(to reordered: [Account]) throws {
+        guard state == .unlocked else { throw StorageError.vaultNotWritable }
         guard reordered.count == accounts.count,
               Set(reordered.map(\.id)) == Set(accounts.map(\.id)) else {
             throw StorageError.notAReordering

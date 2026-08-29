@@ -108,6 +108,37 @@ final class StorageServiceTests: XCTestCase {
         XCTAssertTrue(service.accounts.isEmpty)
     }
 
+    // MARK: - Write guards
+
+    func test_addRefusedWhenLocked() throws {
+        let seeded = makeService(keyStore: InMemoryKeyStore())
+        try seeded.load()
+        try seeded.add(sampleAccount())
+        let before = try Data(contentsOf: URL(fileURLWithPath: tempPath))
+
+        let locked = makeService(keyStore: InMemoryKeyStore())
+        try locked.load()
+        XCTAssertEqual(locked.state, .locked)
+
+        XCTAssertThrowsError(try locked.add(sampleAccount()))
+        XCTAssertTrue(locked.accounts.isEmpty,
+                      "save()가 던지기 전에 이미 메모리의 accounts를 바꿔놓았다")
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: tempPath)), before,
+                       "잠긴 상태에서 파일을 건드리면 계정이 사라진다")
+    }
+
+    func test_deleteRefusedWhenNeedsMigration() throws {
+        try writeLegacyFile(accountCount: 1)
+        let before = try Data(contentsOf: URL(fileURLWithPath: tempPath))
+
+        let service = makeService()
+        try service.load()
+        XCTAssertEqual(service.state, .needsMigration)
+
+        XCTAssertThrowsError(try service.delete(id: 1))
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: tempPath)), before)
+    }
+
     func test_readExistingCLIFile() throws {
         // Write a file in the same format the Go CLI produces
         let json = """
