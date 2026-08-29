@@ -39,17 +39,21 @@ final class KeychainKeyStore: KeyStore {
         self.account = account
     }
 
-    /// iCloud Keychain이 이 키를 사용자의 다른 Mac에 나눠주게 한다.
+    /// 로컬 Keychain에만 저장한다.
     ///
-    /// 이 플래그가 없으면, 저장 위치로 iCloud Drive를 고른 사용자가 Mac을 바꿨을 때
-    /// 파일은 따라오는데 키가 없어서 잠긴다. 지금 코드가 이미 "여러 Mac에서 각자
-    /// 온보딩한 뒤 iCloud로 합류"를 정상 시나리오로 다루고 있다(`StorageService` PathChangeStrategy).
+    /// `kSecAttrSynchronizable`을 켜서 iCloud Keychain이 이 키를 다른 Mac에 나눠주게
+    /// 하고 싶었지만(저장 위치로 iCloud Drive를 고른 사용자가 Mac을 바꿨을 때 파일은
+    /// 따라오는데 키가 없어서 잠기는 문제를 막으려는 의도), 실제 기기에서
+    /// `errSecMissingEntitlement (-34018)`로 거부됨을 확인했다 — 이 플래그는 Apple
+    /// Developer ID로 서명된 앱만 쓸 수 있고, 지금은 자체 서명(`qr2fa-selfsign`)이다.
+    /// Developer ID를 받으면(하위 프로젝트 4) 다시 켠다. 그 전까지는 저장 위치를
+    /// 여러 Mac에서 각자 온보딩해야 한다 — 이미 `StorageService`가 정상 시나리오로
+    /// 다루는 경로다.
     private var baseQuery: [String: Any] {
         [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
-            kSecAttrSynchronizable as String: kCFBooleanTrue as Any,
         ]
     }
 
