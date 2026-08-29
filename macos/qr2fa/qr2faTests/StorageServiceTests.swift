@@ -710,6 +710,51 @@ final class StorageServiceTests: XCTestCase {
         XCTAssertEqual(StorageService.inspectFile(at: target), .accounts(count: 1))
         XCTAssertEqual(service.accounts.first?.issuer, "CurrentService")
         XCTAssertNil(outcome.loadError)
+
+        // inspectFile은 v1 평문과 v2 봉투를 구별하지 않고 같은 개수를 센다 — 이 자리에서
+        // 실제로 평문 JSON을 썼던 회귀가 있었다(Task 5). 봉투 형식과 시크릿 부재를 직접 본다.
+        let raw = try Data(contentsOf: URL(fileURLWithPath: target))
+        guard case .v2 = try VaultCrypto.detect(raw) else {
+            return XCTFail("새로 쓴 파일은 v2 봉투여야 한다")
+        }
+        XCTAssertFalse(String(data: raw, encoding: .utf8)!.contains("JBSWY3DPEHPK3PXP"),
+                       "시크릿이 평문으로 남아 있으면 안 된다")
+    }
+
+    /// `save()`/`migrateToEncrypted()`는 새 키를 만들거나 새 봉투를 쓰기 전에 반드시
+    /// `state`를 확인한다. `materializeCurrentAccounts`의 fallback 분기(현재 파일이 사라져
+    /// 메모리의 accounts를 다시 봉인하는 경로)만 그 확인을 건너뛰고 있었다 — 잠긴 상태에서도
+    /// `resolveKey()`가 조용히 새 Keychain 키를 만들고 빈 봉투를 새 위치에 써버렸다.
+    func test_changePath_refusesToMintKeyWhenLockedAndCurrentFileIsGone() throws {
+        let defaults = makeDefaults()
+        let targetDir = makeTempDir()
+        let target = "\(targetDir)/accounts.json"
+
+        // 키가 있는 저장소로 먼저 v2 파일을 만든 뒤, 키를 모르는 새 KeyStore로 다시 연다 —
+        // 파일은 있는데 키가 없는 "locked" 상태를 재현한다.
+        let keyStoreWithKey = InMemoryKeyStore()
+        let seed = makeService(path: tempPath, defaults: makeDefaults(), keyStore: keyStoreWithKey)
+        try seed.load()
+        try seed.add(sampleAccount())
+
+        let lockedKeyStore = InMemoryKeyStore()
+        let service = makeService(path: tempPath, defaults: defaults, keyStore: lockedKeyStore)
+        try service.load()
+        XCTAssertEqual(service.state, .locked)
+
+        // 외부에서 현재 파일이 사라진 상황 — fallback 분기로 들어가는 조건.
+        try FileManager.default.removeItem(atPath: tempPath)
+
+        XCTAssertThrowsError(try service.changePath(to: target, strategy: .copyCurrent)) { error in
+            guard case StorageError.vaultNotWritable = error else {
+                return XCTFail("잠긴 상태에서 fallback 분기로 들어가면 vaultNotWritable을 던져야 한다: \(error)")
+            }
+        }
+
+        XCTAssertNil(try lockedKeyStore.load(), "잠긴 상태에서 새 키를 만들면 안 된다")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: target),
+                       "쓰기가 거부됐다면 대상 파일이 생기면 안 된다")
+        XCTAssertEqual(service.storagePath, tempPath, "거부됐다면 포인터도 옮기면 안 된다")
     }
 
     /// 복사가 실패하면 대상 폴더는 손도 대지 않은 상태여야 한다 — 백업부터 하면

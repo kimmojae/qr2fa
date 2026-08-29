@@ -270,6 +270,17 @@ final class StorageService {
     @discardableResult
     func changePath(to newPath: String, strategy: PathChangeStrategy) throws -> PathChangeOutcome {
         let previousPath = storagePath
+
+        // copyCurrent이면서 현재 파일이 사라진 경우 materializeCurrentAccounts는 메모리의
+        // accounts를 다시 봉인해야 하는데, 그러려면 resolveKey()가 새 키를 만들 수도 있다.
+        // save()/migrateToEncrypted()와 같은 잣대로 여기서도 미리 막는다 — 그러지 않으면
+        // 잠긴 상태에서도 조용히 새 Keychain 키와 빈 봉투가 생긴다. 현재 파일이 있으면
+        // copyItem이 이미 있는 바이트를 그대로 옮길 뿐이라 state와 무관하게 허용한다.
+        if strategy == .copyCurrent, previousPath != newPath, state != .unlocked,
+           !FileManager.default.fileExists(atPath: previousPath) {
+            throw StorageError.vaultNotWritable
+        }
+
         let newDir = URL(fileURLWithPath: newPath).deletingLastPathComponent().path
         try StorageService.createDirectory(newDir)
 
