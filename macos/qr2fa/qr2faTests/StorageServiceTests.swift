@@ -838,6 +838,28 @@ final class StorageServiceTests: XCTestCase {
         try "not json".write(toFile: "\(dir)/accounts.json", atomically: true, encoding: .utf8)
         XCTAssertEqual(StorageService.inspectTarget(directory: dir), .unreadable)
     }
+
+    func test_inspectFileCountsV2WithoutKey() throws {
+        let key = VaultCrypto.newKey()
+        let inner = Data(#"{"version":"1.0","nextId":2,"accounts":[]}"#.utf8)
+        let sealed = try VaultCrypto.seal(plaintext: inner, accountCount: 2, key: key)
+        try sealed.write(to: URL(fileURLWithPath: tempPath))
+
+        // 키를 주지 않는다 — 개수는 봉투 밖에서 읽혀야 한다
+        XCTAssertEqual(StorageService.inspectFile(at: tempPath), .accounts(count: 2))
+    }
+
+    func test_inspectFileStillCountsV1() throws {
+        let inner = Data(#"{"version":"1.0","nextId":1,"accounts":[{"id":1,"name":"u","issuer":"G","secret":"JBSWY3DPEHPK3PXP","tag":"","algorithm":"SHA1","digits":6,"period":30,"createdAt":"2026-01-01T00:00:00Z"}]}"#.utf8)
+        try inner.write(to: URL(fileURLWithPath: tempPath))
+
+        XCTAssertEqual(StorageService.inspectFile(at: tempPath), .accounts(count: 1))
+    }
+
+    func test_inspectFileUnreadableOnGarbage() throws {
+        try Data("not json".utf8).write(to: URL(fileURLWithPath: tempPath))
+        XCTAssertEqual(StorageService.inspectFile(at: tempPath), .unreadable)
+    }
 }
 
 // MARK: - Reordering

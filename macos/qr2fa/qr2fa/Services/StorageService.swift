@@ -168,14 +168,20 @@ final class StorageService {
 
     static func inspectFile(at path: String) -> TargetState {
         guard FileManager.default.fileExists(atPath: path) else { return .absent }
-        do {
-            let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
+              let format = try? VaultCrypto.detect(data) else { return .unreadable }
+
+        switch format {
+        case .v2(let envelope):
+            // 키 없이 센다. accountCount가 봉투 밖에 있는 이유다.
+            return .accounts(count: envelope.accountCount)
+        case .v1Plaintext:
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .custom(decodeDateStrategy)
-            let storage = try decoder.decode(AccountStorage.self, from: data)
+            guard let storage = try? decoder.decode(AccountStorage.self, from: data) else {
+                return .unreadable
+            }
             return .accounts(count: storage.accounts.count)
-        } catch {
-            return .unreadable
         }
     }
 
