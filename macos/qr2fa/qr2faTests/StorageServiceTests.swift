@@ -48,7 +48,10 @@ final class StorageServiceTests: XCTestCase {
     }
 
     func test_addAndPersist() throws {
-        let service = makeService(path: tempPath)
+        // 재오픈 서비스가 같은 키를 봐야 하므로 keyStore를 공유한다 — 실제로는
+        // KeychainKeyStore가 이 역할을 한다.
+        let keyStore = InMemoryKeyStore()
+        let service = makeService(path: tempPath, keyStore: keyStore)
         try service.load()
 
         let account = Account(
@@ -64,7 +67,7 @@ final class StorageServiceTests: XCTestCase {
         XCTAssertEqual(service.accounts[0].issuer, "GitHub")
 
         // Reload from disk — verify persistence
-        let service2 = makeService(path: tempPath)
+        let service2 = makeService(path: tempPath, keyStore: keyStore)
         try service2.load()
         XCTAssertEqual(service2.accounts.count, 1)
         XCTAssertEqual(service2.accounts[0].issuer, "GitHub")
@@ -125,6 +128,8 @@ final class StorageServiceTests: XCTestCase {
 
         let service = makeService(path: tempPath)
         try service.load()
+        // v1 평문 파일은 이제 즉시 싣지 않고 마이그레이션을 기다린다.
+        try service.migrateToEncrypted()
 
         XCTAssertEqual(service.accounts.count, 1)
         XCTAssertEqual(service.accounts[0].name, "alice")
@@ -142,6 +147,135 @@ final class StorageServiceTests: XCTestCase {
             createdAt: Date()
         )
         XCTAssertThrowsError(try service.update(nonexistent))
+    }
+
+    // MARK: - v2 encryption / migration
+
+    func test_savesAsEncryptedV2() throws {
+        let service = makeService()
+        try service.load()
+        try service.add(sampleAccount())
+
+        let raw = try Data(contentsOf: URL(fileURLWithPath: tempPath))
+        guard case .v2 = try VaultCrypto.detect(raw) else {
+            return XCTFail("저장 파일이 v2 봉투여야 한다")
+        }
+        XCTAssertFalse(String(data: raw, encoding: .utf8)!.contains("JBSWY3DPEHPK3PXP"),
+                       "시크릿이 평문으로 남아 있으면 안 된다")
+    }
+
+    func test_reloadsWithSameKey() throws {
+        let keyStore = InMemoryKeyStore()
+        let service = makeService(keyStore: keyStore)
+        try service.load()
+        try service.add(sampleAccount())
+
+        let reopened = makeService(keyStore: keyStore)
+        try reopened.load()
+        XCTAssertEqual(reopened.state, .unlocked)
+        XCTAssertEqual(reopened.accounts.count, 1)
+        XCTAssertEqual(reopened.accounts[0].secret, "JBSWY3DPEHPK3PXP")
+    }
+
+    func test_lockedWhenKeyMissing() throws {
+        let service = makeService(keyStore: InMemoryKeyStore())
+        try service.load()
+        try service.add(sampleAccount())
+
+        let noKey = makeService(keyStore: InMemoryKeyStore())   // 키 없는 새 저장소
+        try noKey.load()
+        XCTAssertEqual(noKey.state, .locked)
+        XCTAssertTrue(noKey.accounts.isEmpty, "잠긴 상태에서 계정을 노출하면 안 된다")
+    }
+
+    func test_v1FileNeedsMigration() throws {
+        try writeLegacyFile(accountCount: 1)
+        let service = makeService()
+        try service.load()
+
+        XCTAssertEqual(service.state, .needsMigration)
+        XCTAssertTrue(service.accounts.isEmpty, "마이그레이션 전에는 계정을 싣지 않는다")
+    }
+
+    func test_migrationEncryptsAndKeepsOriginal() throws {
+        try writeLegacyFile(accountCount: 1)
+        let service = makeService()
+        try service.load()
+        try service.migrateToEncrypted()
+
+        XCTAssertEqual(service.state, .unlocked)
+        XCTAssertEqual(service.accounts.count, 1)
+
+        let raw = try Data(contentsOf: URL(fileURLWithPath: tempPath))
+        guard case .v2 = try VaultCrypto.detect(raw) else { return XCTFail("v2여야 한다") }
+
+        let backup = try XCTUnwrap(service.lastMigrationBackupPath)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: backup),
+                      "평문 원본은 삭제하지 않고 .old- 로 남긴다")
+        XCTAssertEqual(StorageService.inspectFile(at: backup), .accounts(count: 1))
+    }
+
+    func test_unknownVersionIsUnreadableAndNotOverwritten() throws {
+        let future = Data(#"{"version":"9","accountCount":0,"sealed":"AAAA"}"#.utf8)
+        try future.write(to: URL(fileURLWithPath: tempPath))
+
+        let service = makeService()
+        try service.load()
+
+        // 메시지 문구가 아니라 케이스만 본다 — 문구는 바뀔 수 있다
+        guard case .unreadable = service.state else {
+            return XCTFail("모르는 version은 .unreadable 이어야 한다: \(service.state)")
+        }
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: tempPath)), future,
+                       "읽지 못한 파일을 건드리면 안 된다")
+    }
+
+    func test_changePathKeepsAccountsDecryptable() throws {
+        let keyStore = InMemoryKeyStore()
+        let service = makeService(keyStore: keyStore)
+        try service.load()
+        try service.add(sampleAccount())
+
+        let otherDir = URL(fileURLWithPath: tempPath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("moved").path
+        try StorageService.createDirectory(otherDir)
+        let moved = "\(otherDir)/accounts.json"
+
+        try service.changePath(to: moved, strategy: .copyCurrent)
+
+        XCTAssertEqual(service.state, .unlocked)
+        XCTAssertEqual(service.accounts.count, 1)
+        XCTAssertEqual(service.accounts[0].secret, "JBSWY3DPEHPK3PXP")
+    }
+
+    func test_filePermissionsStay0600AfterEncryptedSave() throws {
+        let service = makeService()
+        try service.load()
+        try service.add(sampleAccount())
+
+        let attrs = try FileManager.default.attributesOfItem(atPath: tempPath)
+        XCTAssertEqual(attrs[.posixPermissions] as? Int, 0o600)
+    }
+
+    // MARK: - 헬퍼
+
+    private func sampleAccount() -> Account {
+        Account(id: 0, name: "user", issuer: "GitHub",
+                secret: "JBSWY3DPEHPK3PXP", tag: "dev",
+                algorithm: "SHA1", digits: 6, period: 30, createdAt: Date())
+    }
+
+    private func writeLegacyFile(accountCount: Int) throws {
+        let accounts = (1...max(accountCount, 1)).prefix(accountCount).map { i in
+            Account(id: i, name: "user\(i)", issuer: "GitHub",
+                    secret: "JBSWY3DPEHPK3PXP", tag: "", algorithm: "SHA1",
+                    digits: 6, period: 30, createdAt: Date())
+        }
+        let storage = AccountStorage(version: "1.0", nextId: accountCount, accounts: Array(accounts))
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        try encoder.encode(storage).write(to: URL(fileURLWithPath: tempPath))
     }
 
     // MARK: - Location resolution
@@ -233,6 +367,8 @@ final class StorageServiceTests: XCTestCase {
 
         let service = makeService(path: tempPath, defaults: defaults)
         try service.commitInitialLocation(directory: targetDir)
+        // 대상 파일은 v1 평문이라 즉시 싣지 않고 마이그레이션을 기다린다.
+        try service.migrateToEncrypted()
 
         XCTAssertEqual(service.storagePath, "\(targetDir)/accounts.json")
         XCTAssertEqual(service.accounts.first?.issuer, "TargetService")
@@ -249,6 +385,8 @@ final class StorageServiceTests: XCTestCase {
 
         let service = makeService(path: tempPath, defaults: defaults)
         try service.commitInitialLocation(directory: targetDir)
+        // 옮겨온 파일도 v1 평문이라 마이그레이션을 기다린다.
+        try service.migrateToEncrypted()
 
         XCTAssertEqual(service.accounts.first?.issuer, "ProvisionalService")
         XCTAssertFalse(FileManager.default.fileExists(atPath: tempPath))
@@ -346,6 +484,8 @@ final class StorageServiceTests: XCTestCase {
         let service = makeService(path: tempPath, defaults: defaults)
         try service.load()
         let outcome = try service.changePath(to: target, strategy: .copyCurrent)
+        // 옮겨간 파일도 v1 평문이라 마이그레이션을 기다린다.
+        try service.migrateToEncrypted()
 
         XCTAssertEqual(service.accounts.first?.issuer, "CurrentService")
 
@@ -358,6 +498,7 @@ final class StorageServiceTests: XCTestCase {
         )
         let restored = makeService(path: backupPath, defaults: makeDefaults())
         try restored.load()
+        try restored.migrateToEncrypted()
         XCTAssertEqual(restored.accounts.first?.issuer, "TargetService")
     }
 
@@ -373,13 +514,16 @@ final class StorageServiceTests: XCTestCase {
         let service = makeService(path: tempPath, defaults: defaults)
         try service.load()
         let outcome = try service.changePath(to: target, strategy: .adoptTarget)
+        // 대상 파일도 v1 평문이라 마이그레이션을 기다린다.
+        try service.migrateToEncrypted()
 
         XCTAssertNil(outcome.backupPath)
         XCTAssertEqual(service.accounts.first?.issuer, "TargetService")
         XCTAssertEqual(try oldCopies(of: tempPath).count, 1)
-        XCTAssertEqual(
-            try FileManager.default.contentsOfDirectory(atPath: targetDir), ["accounts.json"]
-        )
+        // 대상 폴더에 accounts.json만 남는다는 옛 단언은 더 이상 성립하지 않는다 — "원본은
+        // 절대 삭제하지 않는다"는 불변식 때문에 adoptTarget으로 넘어온 v1 원본도
+        // migrateToEncrypted가 .qr2fa 하위폴더에 .old-로 보존한다.
+        XCTAssertEqual(try oldCopies(of: target).count, 1)
     }
 
     func test_changePath_targetAbsent_carriesAccountsOver() throws {
@@ -390,6 +534,7 @@ final class StorageServiceTests: XCTestCase {
         let service = makeService(path: tempPath, defaults: defaults)
         try service.load()
         try service.changePath(to: "\(targetDir)/accounts.json", strategy: .copyCurrent)
+        try service.migrateToEncrypted()
 
         XCTAssertEqual(service.accounts.first?.issuer, "CurrentService")
         XCTAssertEqual(defaults.string(forKey: StorageService.storageDirectoryKey), targetDir)
@@ -403,6 +548,7 @@ final class StorageServiceTests: XCTestCase {
 
         let service = makeService(path: tempPath, defaults: defaults)
         let outcome = try service.changePath(to: tempPath, strategy: .copyCurrent)
+        try service.migrateToEncrypted()
 
         XCTAssertFalse(outcome.hasNotice)
         XCTAssertTrue(FileManager.default.fileExists(atPath: tempPath))
@@ -457,6 +603,7 @@ final class StorageServiceTests: XCTestCase {
         )
         try service.load()
         try service.changePath(to: "\(defaultDir)/accounts.json", strategy: .copyCurrent)
+        try service.migrateToEncrypted()
 
         XCTAssertEqual(service.storagePath, "\(defaultDir)/accounts.json")
         XCTAssertEqual(service.accounts.first?.issuer, "ICloudService")
@@ -479,6 +626,7 @@ final class StorageServiceTests: XCTestCase {
         let outcome = try service.changePath(
             to: "\(defaultDir)/accounts.json", strategy: .copyCurrent
         )
+        try service.migrateToEncrypted()
 
         XCTAssertEqual(service.accounts.first?.issuer, "ICloudService")
         XCTAssertTrue(FileManager.default.fileExists(atPath: try XCTUnwrap(outcome.backupPath)))
@@ -517,6 +665,9 @@ final class StorageServiceTests: XCTestCase {
 
         let service = makeService(path: tempPath, defaults: defaults)
         try service.load()
+        // v1 평문 파일이라 이 시점엔 아직 계정이 실려 있지 않다 — 마이그레이션까지 마쳐야
+        // "메모리의 계정은 살아 있다"는 이 테스트의 전제가 성립한다.
+        try service.migrateToEncrypted()
         // 외부에서 현재 파일이 사라진 상황 (메모리의 계정은 살아 있다)
         try FileManager.default.removeItem(atPath: tempPath)
 
@@ -639,6 +790,7 @@ final class StorageServiceTests: XCTestCase {
         let outcome = try service.changePath(
             to: "\(targetDir)/accounts.json", strategy: .adoptTarget
         )
+        try service.migrateToEncrypted()
 
         let marked = try XCTUnwrap(outcome.markedOldPath)
         XCTAssertTrue(try storedIssuers(at: marked).contains("CurrentService"))
@@ -866,8 +1018,8 @@ final class StorageServiceTests: XCTestCase {
 
 extension StorageServiceTests {
 
-    private func seeded() throws -> StorageService {
-        let service = makeService(path: tempPath)
+    private func seeded(keyStore: KeyStore = InMemoryKeyStore()) throws -> StorageService {
+        let service = makeService(path: tempPath, keyStore: keyStore)
         try service.load()
         for issuer in ["A", "B"] {
             try service.add(Account(
@@ -880,12 +1032,14 @@ extension StorageServiceTests {
     }
 
     func test_reorder_persistsTheNewOrder() throws {
-        let service = try seeded()
+        // 재오픈 서비스가 같은 키를 봐야 하므로 keyStore를 공유한다.
+        let keyStore = InMemoryKeyStore()
+        let service = try seeded(keyStore: keyStore)
 
         try service.reorder(to: service.accounts.reversed())
         XCTAssertEqual(service.accounts.map(\.issuer), ["B", "A"])
 
-        let reloaded = makeService(path: tempPath)
+        let reloaded = makeService(path: tempPath, keyStore: keyStore)
         try reloaded.load()
         XCTAssertEqual(reloaded.accounts.map(\.issuer), ["B", "A"])
     }

@@ -296,6 +296,9 @@ final class StorageService {
         } catch {
             outcome.loadError = error
         }
+        if outcome.loadError == nil {
+            outcome.loadError = loadErrorFromUnreadableState()
+        }
         return outcome
     }
 
@@ -322,7 +325,11 @@ final class StorageService {
         } else {
             // 현재 파일이 외부에서 사라졌어도 메모리의 계정은 살아 있다. "현재 계정으로
             // 덮어쓰기"를 고른 사용자에게는 그 계정이 실제로 새 위치에 놓여야 한다.
-            try StorageService.writeLocked(try encodedSnapshot(), to: staging)
+            // 새로 쓰는 파일이니 평문으로 남기지 않는다 — save()와 같은 봉투로 감싼다.
+            let plaintext = try encodedSnapshot()
+            let key = try resolveKey()
+            let sealed = try VaultCrypto.seal(plaintext: plaintext, accountCount: accounts.count, key: key)
+            try StorageService.writeLocked(sealed, to: staging)
         }
 
         var backupPath: String?
@@ -399,6 +406,9 @@ final class StorageService {
         } catch {
             outcome.loadError = error
         }
+        if outcome.loadError == nil {
+            outcome.loadError = loadErrorFromUnreadableState()
+        }
         return outcome
     }
 
@@ -408,14 +418,60 @@ final class StorageService {
         guard FileManager.default.fileExists(atPath: storagePath) else {
             accounts = []
             nextId = 0
+            state = .unlocked
             return
         }
         let data = try Data(contentsOf: URL(fileURLWithPath: storagePath))
+
+        let format: VaultCrypto.Format
+        do {
+            format = try VaultCrypto.detect(data)
+        } catch {
+            // 읽지 못한 파일은 건드리지 않는다. 던지지 않고 상태로 알린다 —
+            // 호출부가 "빈 계정"과 구별할 수 있어야 한다.
+            accounts = []
+            state = .unreadable(error.localizedDescription)
+            return
+        }
+
+        switch format {
+        case .v1Plaintext:
+            // 계정을 아직 싣지 않는다. migrateToEncrypted()가 부를 때까지 기다린다.
+            accounts = []
+            state = .needsMigration
+
+        case .v2(let envelope):
+            guard let key = try keyStore.load() else {
+                accounts = []
+                state = .locked
+                return
+            }
+            do {
+                let plaintext = try VaultCrypto.open(envelope, key: key)
+                let storage = try Self.decodeStorage(plaintext)
+                accounts = storage.accounts
+                nextId = storage.nextId
+                state = .unlocked
+            } catch {
+                accounts = []
+                state = .unreadable(error.localizedDescription)
+            }
+        }
+    }
+
+    /// 봉투 안의 JSON을 지금까지와 똑같이 디코딩한다.
+    private static func decodeStorage(_ data: Data) throws -> AccountStorage {
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .custom(Self.decodeDateStrategy)
-        let storage = try decoder.decode(AccountStorage.self, from: data)
-        accounts = storage.accounts
-        nextId = storage.nextId
+        decoder.dateDecodingStrategy = .custom(decodeDateStrategy)
+        return try decoder.decode(AccountStorage.self, from: data)
+    }
+
+    /// `load()`는 읽지 못한 파일을 던지지 않고 `state`로만 알린다. `commitInitialLocation`/
+    /// `changePath`는 여전히 "위치는 이미 바뀌었는데 새 파일을 못 읽었다"를 `outcome.loadError`로
+    /// 알려야 하므로, `load()` 호출 뒤 이 상태를 확인해 그 계약을 이어준다.
+    private func loadErrorFromUnreadableState() -> Error? {
+        guard case .unreadable(let message) = state else { return nil }
+        return VaultUnreadableError(message: message)
     }
 
     /// 메모리의 계정을 디스크 포맷으로 직렬화한다.
@@ -428,7 +484,11 @@ final class StorageService {
     }
 
     private func save() throws {
-        let data = try encodedSnapshot()
+        guard state == .unlocked else { throw StorageError.vaultNotWritable }
+
+        let plaintext = try encodedSnapshot()
+        let key = try resolveKey()
+        let data = try VaultCrypto.seal(plaintext: plaintext, accountCount: accounts.count, key: key)
 
         let dir = URL(fileURLWithPath: storagePath).deletingLastPathComponent().path
         try StorageService.createDirectory(dir)
@@ -443,6 +503,47 @@ final class StorageService {
             URL(fileURLWithPath: storagePath),
             withItemAt: URL(fileURLWithPath: tempPath)
         )
+    }
+
+    /// 키를 꺼내오고, 없으면 새로 만들어 보관한다(첫 실행 경로).
+    private func resolveKey() throws -> Data {
+        if let existing = try keyStore.load() { return existing }
+        let fresh = VaultCrypto.newKey()
+        try keyStore.save(fresh)
+        return fresh
+    }
+
+    /// 밀려난 평문 원본의 경로. 마이그레이션 안내에서 "여기 남겨뒀습니다"로 쓴다.
+    private(set) var lastMigrationBackupPath: String?
+
+    /// v1 평문 파일을 v2 봉투로 옮긴다.
+    ///
+    /// 순서가 핵심이다 — 평문 원본과 v2는 **같은 경로**를 쓴다. v2를 먼저 쓰면
+    /// 그 순간 평문 원본이 사라진다. 임시 파일에 먼저 쓰고, 원본을 `.old-`로 밀고,
+    /// 마지막에 임시를 제자리로 올린다.
+    func migrateToEncrypted() throws {
+        guard state == .needsMigration else { return }
+
+        let data = try Data(contentsOf: URL(fileURLWithPath: storagePath))
+        let storage = try Self.decodeStorage(data)
+
+        let key = try resolveKey()
+        let sealed = try VaultCrypto.seal(
+            plaintext: data,
+            accountCount: storage.accounts.count,
+            key: key
+        )
+
+        let staging = storagePath + ".migrating-\(UUID().uuidString.prefix(8))"
+        defer { try? FileManager.default.removeItem(atPath: staging) }
+        try StorageService.writeLocked(sealed, to: staging)
+
+        lastMigrationBackupPath = try StorageService.markOldIfPresent(storagePath)
+        try FileManager.default.moveItem(atPath: staging, toPath: storagePath)
+
+        accounts = storage.accounts
+        nextId = storage.nextId
+        state = .unlocked
     }
 
     // MARK: - CRUD
@@ -500,11 +601,20 @@ final class StorageService {
 enum StorageError: LocalizedError {
     case accountNotFound
     case notAReordering
+    case vaultNotWritable
 
     var errorDescription: String? {
         switch self {
         case .accountNotFound: "Account not found"
         case .notAReordering: "Reordering must keep every account exactly once"
+        case .vaultNotWritable: "Cannot save while the accounts file is unreadable"
         }
     }
+}
+
+/// `load()`가 `state = .unreadable(message)`로만 알리는 실패를, `outcome.loadError`처럼
+/// 여전히 `Error`를 기대하는 호출부로 옮길 때 그 메시지를 그대로 담아 보낸다.
+struct VaultUnreadableError: LocalizedError {
+    let message: String
+    var errorDescription: String? { message }
 }
