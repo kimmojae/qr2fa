@@ -98,8 +98,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case .unlocked:
             break   // 아래 기존 계정 항목 구성으로 진행
         case .locked:
-            menu.addItem(withTitle: "잠김 — 계정 파일을 열 열쇠가 없습니다",
+            let item = menu.addItem(withTitle: "잠김 — 계정 파일을 열 열쇠가 없습니다",
                          action: nil, keyEquivalent: "")
+            item.isEnabled = false
             menu.addItem(.separator())
         case .needsMigration:
             let item = NSMenuItem(title: "저장 방식을 암호화로 바꾸기…",
@@ -108,7 +109,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(item)
             menu.addItem(.separator())
         case .unreadable(let message):
-            menu.addItem(withTitle: message, action: nil, keyEquivalent: "")
+            let item = menu.addItem(withTitle: message, action: nil, keyEquivalent: "")
+            item.isEnabled = false
             menu.addItem(.separator())
         }
 
