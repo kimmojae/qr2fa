@@ -52,11 +52,13 @@ MFA 데이터는 `accounts.json` 한 파일에 담깁니다. 위치는 첫 실�
 
 ## 보안
 
-- 시크릿은 **평문 JSON**으로 저장됩니다 (편의성 우선). 파일 자체가 곧 인증 수단입니다.
+- 시크릿은 **AES-GCM으로 암호화**되어 저장됩니다. 파일을 그대로 복사해도 안에 든 계정 이름과 시크릿을 읽을 수 없습니다.
+- 복호화 키는 이 Mac의 **Keychain**에 보관됩니다 — 앱과 별개로 macOS가 관리합니다.
 - 앱이 만드는 저장 파일은 소유자만 읽고 쓸 수 있게(`0600`) 잠급니다.
-- iCloud Drive에 두면 Apple의 전송·저장 암호화가 적용됩니다.
+- iCloud Drive에 두면 파일 자체는 이미 암호화되어 있고, 거기에 Apple의 전송·저장 암호화가 한 번 더 적용됩니다.
+- 기존 평문 파일을 쓰던 경우 앱이 자동으로 암호화로 전환하고, 원본은 지우지 않고 같은 폴더의 `.qr2fa/accounts.json.old-<시각>`으로 남겨둡니다.
 
-> ⚠️ **디스크 암호화(FileVault)와 강력한 로그인 비밀번호가 필수입니다.** 이 파일을 통째로 복사당하면 모든 2FA가 뚫립니다. iCloud를 쓴다면 Apple ID의 2단계 인증도 반드시 켜두세요.
+> ⚠️ **키를 다른 Mac과 자동으로 동기화하지 않습니다.** 지금은 각 Mac이 자기 Keychain에 독립적으로 키를 갖습니다 — iCloud Drive로 파일을 공유해도, 새 Mac에서는 그 Mac에서 한 번 온보딩해야 열립니다. 또한 **키를 잃으면(Keychain 초기화 등) 복구할 방법이 아직 없습니다** — 디스크 암호화(FileVault)와 강력한 로그인 비밀번호는 여전히 필수입니다.
 
 ## 개발
 
@@ -81,6 +83,7 @@ Xcode 프로젝트는 [XcodeGen](https://github.com/yonaskolb/XcodeGen)이 `maco
 - `App/` — `AppDelegate`(메뉴바 `NSStatusItem`), `qr2faApp`(SwiftUI 씬)
 - `Models/` — `Account`, `AccountStorage`
 - `Services/` — `StorageService`(저장·경로), `TOTPGenerator`(RFC 6238), `MigrationParser`, `FileWatcher`
+- `Services/Vault/` — `VaultCrypto`(AES-GCM 암호화), `KeyStore`(Keychain 키 관리)
 - `Views/` — 온보딩, 설정 창, 계정 상세, QR 캡처
 
 ---
@@ -89,7 +92,9 @@ Xcode 프로젝트는 [XcodeGen](https://github.com/yonaskolb/XcodeGen)이 `maco
 
 > **이 CLI는 더 이상 유지보수하지 않습니다.** 코드는 참고용으로 저장소에 남아 있지만 릴리스에 포함되지 않으며, 새로운 기능은 macOS 앱에만 추가됩니다.
 >
-> **앱과 저장 위치 설정을 공유하지 않습니다.** 앱은 고른 폴더를 자체 설정에 기억하고, CLI는 `~/.config/qr2fa/config.json`을 봅니다. 둘 다 쓰려면 양쪽이 같은 폴더를 가리키는지 직접 확인하세요 — 그러지 않으면 서로 다른 `accounts.json`을 보게 됩니다. `accounts.json` 형식 자체는 동일합니다.
+> **앱과 저장 위치 설정을 공유하지 않습니다.** 앱은 고른 폴더를 자체 설정에 기억하고, CLI는 `~/.config/qr2fa/config.json`을 봅니다. 둘 다 쓰려면 양쪽이 같은 폴더를 가리키는지 직접 확인하세요 — 그러지 않으면 서로 다른 `accounts.json`을 보게 됩니다.
+>
+> **앱이 저장 파일을 암호화한 뒤로는 형식도 더 이상 같지 않습니다.** CLI는 암호화된 파일을 읽지 못합니다. 마이그레이션 시 원본 평문 파일이 `.qr2fa/accounts.json.old-<시각>`으로 남으므로, CLI만 계속 쓰려면 그 파일을 CLI가 보는 경로로 옮겨 쓰세요.
 
 <details>
 <summary>사용법 펼치기</summary>
