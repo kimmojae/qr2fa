@@ -229,14 +229,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func runMigration() {
         do {
-            try storageService.migrateToEncrypted()
+            let backupPath = try storageService.migrateToEncrypted()
             let alert = NSAlert()
             alert.messageText = "계정 파일을 암호화했습니다"
             alert.informativeText = """
                 열쇠는 이 Mac의 Keychain에 보관됩니다.
 
                 예전 평문 파일은 지우지 않고 남겨뒀습니다:
-                \(storageService.lastMigrationBackupPath ?? "-")
+                \(backupPath ?? "-")
 
                 정상 동작을 확인한 뒤 직접 지우셔야 실제로 안전해집니다.
                 """

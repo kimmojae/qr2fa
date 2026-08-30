@@ -271,16 +271,6 @@ final class StorageService {
     func changePath(to newPath: String, strategy: PathChangeStrategy) throws -> PathChangeOutcome {
         let previousPath = storagePath
 
-        // copyCurrent이면서 현재 파일이 사라진 경우 materializeCurrentAccounts는 메모리의
-        // accounts를 다시 봉인해야 하는데, 그러려면 resolveKey()가 새 키를 만들 수도 있다.
-        // save()/migrateToEncrypted()와 같은 잣대로 여기서도 미리 막는다 — 그러지 않으면
-        // 잠긴 상태에서도 조용히 새 Keychain 키와 빈 봉투가 생긴다. 현재 파일이 있으면
-        // copyItem이 이미 있는 바이트를 그대로 옮길 뿐이라 state와 무관하게 허용한다.
-        if strategy == .copyCurrent, previousPath != newPath, state != .unlocked,
-           !FileManager.default.fileExists(atPath: previousPath) {
-            throw StorageError.vaultNotWritable
-        }
-
         let newDir = URL(fileURLWithPath: newPath).deletingLastPathComponent().path
         try StorageService.createDirectory(newDir)
 
@@ -314,9 +304,7 @@ final class StorageService {
         } catch {
             outcome.loadError = error
         }
-        if outcome.loadError == nil {
-            outcome.loadError = loadErrorFromUnreadableState()
-        }
+        outcome.loadError = outcome.loadError ?? loadErrorFromUnreadableState()
         return outcome
     }
 
@@ -344,6 +332,11 @@ final class StorageService {
             // 현재 파일이 외부에서 사라졌어도 메모리의 계정은 살아 있다. "현재 계정으로
             // 덮어쓰기"를 고른 사용자에게는 그 계정이 실제로 새 위치에 놓여야 한다.
             // 새로 쓰는 파일이니 평문으로 남기지 않는다 — save()와 같은 봉투로 감싼다.
+            // resolveKey()가 새 Keychain 키를 만들 수도 있으므로, save()/migrateToEncrypted()와
+            // 같은 잣대로 여기서도 확인한다 — 그러지 않으면 잠긴 상태에서도 조용히 새 키와
+            // 빈 봉투가 생긴다. 파일이 있어 그대로 복사하는 위 분기는 아무것도 새로 만들지
+            // 않으므로 이 확인이 필요 없다.
+            try requireUnlocked()
             let plaintext = try encodedSnapshot()
             let key = try resolveKey()
             let sealed = try VaultCrypto.seal(plaintext: plaintext, accountCount: accounts.count, key: key)
@@ -424,9 +417,7 @@ final class StorageService {
         } catch {
             outcome.loadError = error
         }
-        if outcome.loadError == nil {
-            outcome.loadError = loadErrorFromUnreadableState()
-        }
+        outcome.loadError = outcome.loadError ?? loadErrorFromUnreadableState()
         return outcome
     }
 
@@ -501,8 +492,15 @@ final class StorageService {
         return try encoder.encode(storage)
     }
 
-    private func save() throws {
+    /// 잠기거나 읽지 못한 상태에서 쓰기를 막는다. 계정을 바꾸는 모든 진입점(`save()`와
+    /// CRUD 메서드들)이 메모리를 건드리기 전에 이걸 먼저 호출해야 한다 — `save()` 안에서만
+    /// 확인하면 CRUD 메서드가 이미 `accounts`를 바꾼 뒤라 디스크와 메모리가 어긋난다.
+    private func requireUnlocked() throws {
         guard state == .unlocked else { throw StorageError.vaultNotWritable }
+    }
+
+    private func save() throws {
+        try requireUnlocked()
 
         let plaintext = try encodedSnapshot()
         let key = try resolveKey()
@@ -531,16 +529,15 @@ final class StorageService {
         return fresh
     }
 
-    /// 밀려난 평문 원본의 경로. 마이그레이션 안내에서 "여기 남겨뒀습니다"로 쓴다.
-    private(set) var lastMigrationBackupPath: String?
-
-    /// v1 평문 파일을 v2 봉투로 옮긴다.
+    /// v1 평문 파일을 v2 봉투로 옮긴다. 반환값은 밀려난 평문 원본의 경로(없으면 nil) —
+    /// 마이그레이션 안내에서 "여기 남겨뒀습니다"로 쓴다.
     ///
     /// 순서가 핵심이다 — 평문 원본과 v2는 **같은 경로**를 쓴다. v2를 먼저 쓰면
     /// 그 순간 평문 원본이 사라진다. 임시 파일에 먼저 쓰고, 원본을 `.old-`로 밀고,
     /// 마지막에 임시를 제자리로 올린다.
-    func migrateToEncrypted() throws {
-        guard state == .needsMigration else { return }
+    @discardableResult
+    func migrateToEncrypted() throws -> String? {
+        guard state == .needsMigration else { return nil }
 
         let data = try Data(contentsOf: URL(fileURLWithPath: storagePath))
         let storage = try Self.decodeStorage(data)
@@ -556,19 +553,20 @@ final class StorageService {
         defer { try? FileManager.default.removeItem(atPath: staging) }
         try StorageService.writeLocked(sealed, to: staging)
 
-        lastMigrationBackupPath = try StorageService.markOldIfPresent(storagePath)
+        let backupPath = try StorageService.markOldIfPresent(storagePath)
         try FileManager.default.moveItem(atPath: staging, toPath: storagePath)
 
         accounts = storage.accounts
         nextId = storage.nextId
         state = .unlocked
+        return backupPath
     }
 
     // MARK: - CRUD
 
     @discardableResult
     func add(_ account: Account) throws -> Account {
-        guard state == .unlocked else { throw StorageError.vaultNotWritable }
+        try requireUnlocked()
         nextId += 1
         var acc = account
         acc.id = nextId
@@ -579,7 +577,7 @@ final class StorageService {
     }
 
     func update(_ account: Account) throws {
-        guard state == .unlocked else { throw StorageError.vaultNotWritable }
+        try requireUnlocked()
         guard let idx = accounts.firstIndex(where: { $0.id == account.id }) else {
             throw StorageError.accountNotFound
         }
@@ -588,7 +586,7 @@ final class StorageService {
     }
 
     func delete(id: Int) throws {
-        guard state == .unlocked else { throw StorageError.vaultNotWritable }
+        try requireUnlocked()
         accounts.removeAll { $0.id == id }
         try save()
     }
@@ -597,7 +595,7 @@ final class StorageService {
     /// reordering must never be a path that loses or duplicates an account, because
     /// the payload is unrecoverable TOTP secrets.
     func reorder(to reordered: [Account]) throws {
-        guard state == .unlocked else { throw StorageError.vaultNotWritable }
+        try requireUnlocked()
         guard reordered.count == accounts.count,
               Set(reordered.map(\.id)) == Set(accounts.map(\.id)) else {
             throw StorageError.notAReordering

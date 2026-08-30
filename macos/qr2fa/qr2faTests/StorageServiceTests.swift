@@ -113,14 +113,14 @@ final class StorageServiceTests: XCTestCase {
     func test_addRefusedWhenLocked() throws {
         let seeded = makeService(keyStore: InMemoryKeyStore())
         try seeded.load()
-        try seeded.add(sampleAccount())
+        try seeded.add(makeAccount())
         let before = try Data(contentsOf: URL(fileURLWithPath: tempPath))
 
         let locked = makeService(keyStore: InMemoryKeyStore())
         try locked.load()
         XCTAssertEqual(locked.state, .locked)
 
-        XCTAssertThrowsError(try locked.add(sampleAccount()))
+        XCTAssertThrowsError(try locked.add(makeAccount()))
         XCTAssertTrue(locked.accounts.isEmpty,
                       "save()가 던지기 전에 이미 메모리의 accounts를 바꿔놓았다")
         XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: tempPath)), before,
@@ -128,7 +128,7 @@ final class StorageServiceTests: XCTestCase {
     }
 
     func test_deleteRefusedWhenNeedsMigration() throws {
-        try writeLegacyFile(accountCount: 1)
+        try writeStorage(at: tempPath, issuer: "GitHub")
         let before = try Data(contentsOf: URL(fileURLWithPath: tempPath))
 
         let service = makeService()
@@ -185,7 +185,7 @@ final class StorageServiceTests: XCTestCase {
     func test_savesAsEncryptedV2() throws {
         let service = makeService()
         try service.load()
-        try service.add(sampleAccount())
+        try service.add(makeAccount())
 
         let raw = try Data(contentsOf: URL(fileURLWithPath: tempPath))
         guard case .v2 = try VaultCrypto.detect(raw) else {
@@ -199,7 +199,7 @@ final class StorageServiceTests: XCTestCase {
         let keyStore = InMemoryKeyStore()
         let service = makeService(keyStore: keyStore)
         try service.load()
-        try service.add(sampleAccount())
+        try service.add(makeAccount())
 
         let reopened = makeService(keyStore: keyStore)
         try reopened.load()
@@ -211,7 +211,7 @@ final class StorageServiceTests: XCTestCase {
     func test_lockedWhenKeyMissing() throws {
         let service = makeService(keyStore: InMemoryKeyStore())
         try service.load()
-        try service.add(sampleAccount())
+        try service.add(makeAccount())
 
         let noKey = makeService(keyStore: InMemoryKeyStore())   // 키 없는 새 저장소
         try noKey.load()
@@ -220,7 +220,7 @@ final class StorageServiceTests: XCTestCase {
     }
 
     func test_v1FileNeedsMigration() throws {
-        try writeLegacyFile(accountCount: 1)
+        try writeStorage(at: tempPath, issuer: "GitHub")
         let service = makeService()
         try service.load()
 
@@ -229,10 +229,10 @@ final class StorageServiceTests: XCTestCase {
     }
 
     func test_migrationEncryptsAndKeepsOriginal() throws {
-        try writeLegacyFile(accountCount: 1)
+        try writeStorage(at: tempPath, issuer: "GitHub")
         let service = makeService()
         try service.load()
-        try service.migrateToEncrypted()
+        let migrationBackupPath = try service.migrateToEncrypted()
 
         XCTAssertEqual(service.state, .unlocked)
         XCTAssertEqual(service.accounts.count, 1)
@@ -240,7 +240,7 @@ final class StorageServiceTests: XCTestCase {
         let raw = try Data(contentsOf: URL(fileURLWithPath: tempPath))
         guard case .v2 = try VaultCrypto.detect(raw) else { return XCTFail("v2여야 한다") }
 
-        let backup = try XCTUnwrap(service.lastMigrationBackupPath)
+        let backup = try XCTUnwrap(migrationBackupPath)
         XCTAssertTrue(FileManager.default.fileExists(atPath: backup),
                       "평문 원본은 삭제하지 않고 .old- 로 남긴다")
         XCTAssertEqual(StorageService.inspectFile(at: backup), .accounts(count: 1))
@@ -265,7 +265,7 @@ final class StorageServiceTests: XCTestCase {
         let keyStore = InMemoryKeyStore()
         let service = makeService(keyStore: keyStore)
         try service.load()
-        try service.add(sampleAccount())
+        try service.add(makeAccount())
 
         let otherDir = URL(fileURLWithPath: tempPath)
             .deletingLastPathComponent()
@@ -283,30 +283,10 @@ final class StorageServiceTests: XCTestCase {
     func test_filePermissionsStay0600AfterEncryptedSave() throws {
         let service = makeService()
         try service.load()
-        try service.add(sampleAccount())
+        try service.add(makeAccount())
 
         let attrs = try FileManager.default.attributesOfItem(atPath: tempPath)
         XCTAssertEqual(attrs[.posixPermissions] as? Int, 0o600)
-    }
-
-    // MARK: - 헬퍼
-
-    private func sampleAccount() -> Account {
-        Account(id: 0, name: "user", issuer: "GitHub",
-                secret: "JBSWY3DPEHPK3PXP", tag: "dev",
-                algorithm: "SHA1", digits: 6, period: 30, createdAt: Date())
-    }
-
-    private func writeLegacyFile(accountCount: Int) throws {
-        let accounts = (1...max(accountCount, 1)).prefix(accountCount).map { i in
-            Account(id: i, name: "user\(i)", issuer: "GitHub",
-                    secret: "JBSWY3DPEHPK3PXP", tag: "", algorithm: "SHA1",
-                    digits: 6, period: 30, createdAt: Date())
-        }
-        let storage = AccountStorage(version: "1.0", nextId: accountCount, accounts: Array(accounts))
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        try encoder.encode(storage).write(to: URL(fileURLWithPath: tempPath))
     }
 
     // MARK: - Location resolution
@@ -735,7 +715,7 @@ final class StorageServiceTests: XCTestCase {
         let keyStoreWithKey = InMemoryKeyStore()
         let seed = makeService(path: tempPath, defaults: makeDefaults(), keyStore: keyStoreWithKey)
         try seed.load()
-        try seed.add(sampleAccount())
+        try seed.add(makeAccount())
 
         let lockedKeyStore = InMemoryKeyStore()
         let service = makeService(path: tempPath, defaults: defaults, keyStore: lockedKeyStore)
