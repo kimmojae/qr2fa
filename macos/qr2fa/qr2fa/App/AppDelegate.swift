@@ -6,13 +6,20 @@ import Observation
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
     let storageService = StorageService()
-    /// SwiftUI 쪽에서 주입하는 설정 창 열기 액션(openWindow).
-    var presentSettings: (() -> Void)?
-    private var statusItem: NSStatusItem!
-    private var submenuDelegates: [SubMenuDelegate] = []
-    private weak var settingsWindow: NSWindow?
+    /// 메뉴바 패널과 계정 창이 같은 초를 보게 하는 공용 시계. 화면마다 타이머를 돌리면
+    /// 둘을 나란히 띄웠을 때 남은 시간이 어긋난다.
+    let clock = TOTPClock()
+    /// 태그 대표 색. 설정 창에서 고르고 메뉴바가 같이 따라야 하므로 여기서 하나만 만든다.
+    let tagStyle = TagStyle()
+    /// SwiftUI 쪽에서 주입하는 창 열기 액션(openWindow). 상태바 레이블이 배선한다.
+    var presentAccounts: (() -> Void)?
+    var presentOnboarding: (() -> Void)?
+    /// ⌘,로 여는 설정 창. 메뉴바 패널의 "Settings…"가 배선한다.
+    var presentGeneralSettings: (() -> Void)?
+    /// 닫힘을 관찰 중인 창들. 같은 창에 옵저버를 두 번 달지 않으려고 들고 있는다.
+    private var observedWindows = NSHashTable<NSWindow>.weakObjects()
 
-    // 메뉴바 앱이므로 설정 창을 닫아도 앱이 종료되면 안 된다.
+    // 메뉴바 앱이므로 창을 다 닫아도 앱이 종료되면 안 된다.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }
@@ -28,7 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // 아직 위치를 고르지 않았다면 온보딩 창이 앞으로 나오는 게 맞다.
         guard !storageService.needsLocationChoice else { return true }
         hideOnboardingWindow()
-        openSettings()
+        openAccounts()
         return false
     }
 
@@ -47,19 +54,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         do { try storageService.load() } catch {
             NSLog("qr2fa: load failed: \(error)")
         }
-        setupStatusItem()
-        observeAccounts()
     }
 
-    /// SwiftUI Settings 씬이 만든 창.
+    /// SwiftUI가 만든 계정 창(3열).
     ///
     /// 예전엔 "메인이 될 수 있는 첫 창"으로 찾았는데, 온보딩 씬이 생기면서 그 전제가 깨졌다 —
     /// 온보딩 창이 먼저 만들어지고 `dismissWindow`는 order-out일 뿐 `NSApp.windows`에서
-    /// 빼주지 않아, 닫힌 온보딩 창을 집어 willClose 옵저버가 엉뚱한 창에 붙었다(설정 창을
+    /// 빼주지 않아, 닫힌 온보딩 창을 집어 willClose 옵저버가 엉뚱한 창에 붙었다(창을
     /// 닫아도 `.accessory`로 안 돌아가 Dock 아이콘이 남았다). 씬 id로 정확히 고른다.
     /// SwiftUI는 씬 id를 창의 identifier와 frameAutosaveName에 넣는데, 어느 쪽이 채워질지는
     /// 보장되지 않아 둘 다 본다.
-    private func settingsSceneWindow() -> NSWindow? { sceneWindow(id: AppWindowID.settings) }
+    private func accountsSceneWindow() -> NSWindow? { sceneWindow(id: AppWindowID.accounts) }
 
     private func onboardingSceneWindow() -> NSWindow? { sceneWindow(id: AppWindowID.onboarding) }
 
@@ -69,150 +74,98 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func setupStatusItem() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        let icon = NSImage(named: "MenuBarIcon")
-        icon?.isTemplate = true
-        icon?.size = NSSize(width: 18, height: 18)
-        statusItem.button?.image = icon
-        rebuildMenu()
-    }
-
-    private func observeAccounts() {
-        withObservationTracking {
-            _ = storageService.accounts
-            _ = storageService.state
-        } onChange: { [weak self] in
-            DispatchQueue.main.async {
-                self?.rebuildMenu()
-                self?.observeAccounts()
-            }
+    /// SwiftUI `Settings` 씬이 만든 창. identifier를 우리가 정하지 않고 SwiftUI가 붙이므로
+    /// (`com_apple_SwiftUI_Settings_window`) 그 이름으로 찾는다.
+    private func generalSettingsSceneWindow() -> NSWindow? {
+        NSApp.windows.first {
+            ($0.identifier?.rawValue ?? "").contains("Settings")
+                || $0.frameAutosaveName.contains("Settings")
         }
     }
 
-    private func rebuildMenu() {
-        submenuDelegates = []
-        let menu = NSMenu()
-
-        switch storageService.state {
-        case .unlocked:
-            break   // 아래 기존 계정 항목 구성으로 진행
-        case .locked:
-            let item = menu.addItem(withTitle: "잠김 — 계정 파일을 열 열쇠가 없습니다",
-                         action: nil, keyEquivalent: "")
-            item.isEnabled = false
-            menu.addItem(.separator())
-        case .needsMigration:
-            let item = NSMenuItem(title: "저장 방식을 암호화로 바꾸기…",
-                                  action: #selector(runMigration), keyEquivalent: "")
-            item.target = self
-            menu.addItem(item)
-            menu.addItem(.separator())
-        case .unreadable(let message):
-            let item = menu.addItem(withTitle: message, action: nil, keyEquivalent: "")
-            item.isEnabled = false
-            menu.addItem(.separator())
+    /// 저장 위치를 아직 안 골랐으면 온보딩 창을 연다. 배선이 끝난 직후에 불린다.
+    func presentOnboardingIfNeeded() {
+        guard storageService.needsLocationChoice else { return }
+        presentOnboarding?()
+        DispatchQueue.main.async {
+            NSApp.setActivationPolicy(.regular)
+            NSApp.activate(ignoringOtherApps: true)
+            self.onboardingSceneWindow()?.makeKeyAndOrderFront(nil)
         }
-
-        let groups = groupedAccounts()
-
-        if groups.isEmpty {
-            let empty = NSMenuItem(title: "No accounts", action: nil, keyEquivalent: "")
-            empty.isEnabled = false
-            menu.addItem(empty)
-        } else {
-            for (issuer, accounts) in groups {
-                let title = issuer.count > 18 ? String(issuer.prefix(16)) + "…" : issuer
-                let issuerItem = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-                let submenu = NSMenu(title: issuer)
-                var pairs: [(NSMenuItem, AccountMenuItemView)] = []
-
-                for account in accounts {
-                    let item = NSMenuItem()
-                    item.target = self
-                    item.action = #selector(noOp)
-                    let view = AccountMenuItemView(account: account)
-                    item.view = view
-                    pairs.append((item, view))
-                    submenu.addItem(item)
-                }
-
-                let delegate = SubMenuDelegate(pairs: pairs)
-                submenu.delegate = delegate
-                submenuDelegates.append(delegate)
-
-                issuerItem.submenu = submenu
-                menu.addItem(issuerItem)
-            }
-        }
-
-        menu.addItem(.separator())
-        let settingsItem = NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ",")
-        settingsItem.image = NSImage(systemSymbolName: "gear", accessibilityDescription: nil)
-        menu.addItem(settingsItem)
-        let quitItem = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        quitItem.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: nil)
-        menu.addItem(quitItem)
-
-        statusItem.menu = menu
     }
 
-    private func groupedAccounts() -> [(String, [Account])] {
-        var dict: [String: [Account]] = [:]
-        for acc in storageService.accounts {
-            dict[acc.displayIssuer, default: []].append(acc)
-        }
-        // 이름순이 아니라 사용자가 설정 창에서 정한 순서(= 저장 순서)를 따른다.
-        return AccountOrdering.issuers(in: storageService.accounts).map { ($0, dict[$0]!) }
+    /// 계정 창을 여는 통로.
+    ///
+    /// `present`를 주면 그걸 쓴다 — 패널처럼 자기 `openWindow`를 가진 뷰는 주입된 클로저에
+    /// 기대지 않는 게 안전하다. AppKit 쪽(Dock/Spotlight 재실행)은 뷰가 없어서 생략한다.
+    func openAccounts(present: (() -> Void)? = nil) {
+        show(open: present ?? { [weak self] in self?.presentAccounts?() },
+             find: { [weak self] in self?.accountsSceneWindow() },
+             name: "accounts")
     }
 
-    @objc private func openSettings() {
-        // 상태바 메뉴가 닫힌 뒤(다음 런루프) 실행한다.
+    /// 설정 창(⌘,)을 여는 통로. 계정 창과 같은 절차를 탄다 — 메뉴바 앱은 `.accessory`로
+    /// 떠 있어서, 창을 여는 것만으로는 앞으로 나오지 않는다.
+    func openGeneralSettings(present: (() -> Void)? = nil) {
+        show(open: present ?? { [weak self] in self?.presentGeneralSettings?() },
+             find: { [weak self] in self?.generalSettingsSceneWindow() },
+             name: "settings")
+    }
+
+    private func show(open: @escaping () -> Void,
+                      find: @escaping () -> NSWindow?,
+                      name: String) {
+        // 패널이 닫힌 뒤(다음 런루프) 실행한다.
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             NSApp.setActivationPolicy(.regular)
-            // SwiftUI가 소유한 Window 씬을 openWindow 액션으로 연다.
-            self.presentSettings?()
-            self.finishPresentingSettings(attemptsLeft: 20)
+            open()
+            self.finishPresenting(open: open, find: find, name: name, attemptsLeft: 20)
         }
     }
 
-    /// 설정 창이 실제로 생긴 뒤에 앞으로 꺼내고 앱을 활성화한다.
+    /// 창이 실제로 생긴 뒤에 앞으로 꺼내고 앱을 활성화한다.
     ///
     /// 예전엔 `openWindow` 직후 다음 런루프에 딱 한 번 창을 찾고, 못 찾으면 그냥 return이었다.
-    /// 그런데 (1) `presentSettings` 배선은 온보딩 씬의 onAppear에서 이뤄지므로 로그인 항목으로 막
+    /// 그런데 (1) `presentAccounts` 배선은 상태바 레이블의 onAppear에서 이뤄지므로 로그인 항목으로 막
     /// 떠오른 직후엔 아직 nil일 수 있고, (2) `openWindow`가 만드는 창이 그 한 번의 확인 시점에
     /// 항상 있는 것도 아니며, (3) `.accessory` → `.regular`로 바꾼 직후의 `activate`는 자주
     /// 무시된다. 그래서 첫 클릭이 아무 일도 안 하거나 설정 창이 다른 앱 창 뒤에서 열려 "두 번
     /// 눌러야 되는" 증상이 났다. 창이 나타날 때까지 짧게 재시도하고, 찾은 뒤에 order-front와
     /// activate를 한다.
-    private func finishPresentingSettings(attemptsLeft: Int) {
-        guard let window = settingsSceneWindow() else {
+    private func finishPresenting(open: @escaping () -> Void,
+                                  find: @escaping () -> NSWindow?,
+                                  name: String,
+                                  attemptsLeft: Int) {
+        guard let window = find() else {
             guard attemptsLeft > 0 else {
-                NSLog("qr2fa: settings window did not appear")
+                NSLog("qr2fa: \(name) window did not appear")
                 // 창 없이 Dock 아이콘만 남기지 않는다.
                 NSApp.setActivationPolicy(.accessory)
                 return
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
                 guard let self else { return }
-                // 배선이 늦게 끝났을 수 있으니 다시 부른다. 이미 열린 창에 대해선 무해하다.
-                self.presentSettings?()
-                self.finishPresentingSettings(attemptsLeft: attemptsLeft - 1)
+                // 창이 아직 안 생겼을 수 있으니 다시 부른다. 이미 열린 창에 대해선 무해하다.
+                open()
+                self.finishPresenting(open: open, find: find, name: name,
+                                      attemptsLeft: attemptsLeft - 1)
             }
             return
         }
         // 창이 뜬 뒤, 닫힘을 관찰해 다시 액세서리 모드로 돌리고 위치를 보정한다.
-        if settingsWindow !== window {
-            settingsWindow = window
+        if !observedWindows.contains(window) {
+            observedWindows.add(window)
             NotificationCenter.default.addObserver(
                 self,
-                selector: #selector(settingsWindowWillClose(_:)),
+                selector: #selector(appWindowWillClose(_:)),
                 name: NSWindow.willCloseNotification,
                 object: window
             )
         }
-        window.toolbarStyle = .unified
+        // toolbarStyle은 건드리지 않는다. `.unified`로 바꿔 두면 SwiftUI가 분할 열마다
+        // 나눠 둔 툴바 구역이 창 툴바 하나로 합쳐진다 — 계정 창의 +·검색·편집이 열을
+        // 따라가려면 기본값이어야 한다.
         // 씬이 복원한 위치가 화면 밖이면 가운데로.
         if !NSScreen.screens.contains(where: { $0.frame.intersects(window.frame) }) {
             window.center()
@@ -221,13 +174,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    @objc private func settingsWindowWillClose(_ note: Notification) {
-        NSApp.setActivationPolicy(.accessory)
+    /// 창 하나가 닫혔다고 바로 액세서리로 돌리면, 계정 창과 설정 창을 같이 띄웠다가 하나만
+    /// 닫았을 때 남은 창이 Dock 아이콘 없이 붕 뜬다. 남아 있는 창이 없을 때만 돌린다.
+    @objc private func appWindowWillClose(_ note: Notification) {
+        let closing = note.object as? NSWindow
+        DispatchQueue.main.async {
+            let stillOpen = NSApp.windows.contains {
+                $0 !== closing && $0.isVisible && $0.canBecomeMain
+            }
+            if !stillOpen { NSApp.setActivationPolicy(.accessory) }
+        }
     }
 
-    @objc private func noOp() {}
-
-    @objc private func runMigration() {
+    func runMigration() {
         do {
             let backupPath = try storageService.migrateToEncrypted()
             let alert = NSAlert()
@@ -244,38 +203,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } catch {
             let alert = NSAlert(error: error)
             alert.runModal()
-        }
-    }
-}
-
-// MARK: - SubMenuDelegate
-
-final class SubMenuDelegate: NSObject, NSMenuDelegate {
-    private let pairs: [(NSMenuItem, AccountMenuItemView)]
-    private var timer: Timer?
-
-    init(pairs: [(NSMenuItem, AccountMenuItemView)]) {
-        self.pairs = pairs
-    }
-
-    func menuWillOpen(_ menu: NSMenu) {
-        pairs.forEach { $0.1.updateCode() }
-        let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.pairs.forEach { $0.1.updateCode() }
-        }
-        RunLoop.main.add(t, forMode: .common)
-        timer = t
-    }
-
-    func menuDidClose(_ menu: NSMenu) {
-        timer?.invalidate()
-        timer = nil
-        pairs.forEach { $0.1.setHighlighted(false) }
-    }
-
-    func menu(_ menu: NSMenu, willHighlight item: NSMenuItem?) {
-        for (menuItem, view) in pairs {
-            view.setHighlighted(menuItem === item)
         }
     }
 }

@@ -61,7 +61,7 @@ struct OnboardingView: View {
             .formStyle(.grouped)
 
             HStack {
-                Text("나중에 설정 > 일반에서 바꿀 수 있습니다.")
+                Text("나중에 설정(⌘,) > 저장에서 바꿀 수 있습니다.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                 Spacer()

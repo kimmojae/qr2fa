@@ -44,7 +44,9 @@ targets:
         NSPrivacyAccessedAPITypes: []
         NSScreenCaptureUsageDescription: "QR code scanning requires screen access"
     dependencies:
-      - sdk: ScreenCaptureKit.framework
+      # 화면 선택 캡처는 시스템 도구(/usr/sbin/screencapture)에 맡기고, Vision은 캡처한
+      # 이미지에서 QR을 읽는 데 쓴다. ScreenCaptureKit은 링크만 돼 있고 쓰는 곳이 없어 뺐다
+      # — 직접 캡처로 바꾸게 되면 그때 다시 넣는다.
       - sdk: Vision.framework
     entitlements:
       path: qr2fa/qr2fa.entitlements
