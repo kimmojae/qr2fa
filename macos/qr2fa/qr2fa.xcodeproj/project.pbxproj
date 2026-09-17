@@ -39,6 +39,7 @@
 		8077C1A89B2075ACDBAD77FF /* QRScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6E1CA5A011314EBD85E5330 /* QRScanner.swift */; };
 		848931DDF909D64B155A54AA /* MenuBarPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2382F079A5CF0DAC99E33DF0 /* MenuBarPanelView.swift */; };
 		86A7887A3B599008C0829C42 /* AccountMemoCodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE6A75BBAA776EC74B50C378 /* AccountMemoCodingTests.swift */; };
+		8960997CC9CA72B1DA5F0DF3 /* AppPresenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80B8717037F9A5BFD588F8FA /* AppPresenceTests.swift */; };
 		8BFB1A2EA4991501B34E47E3 /* TagStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AD1DC3778D1B8493A534350 /* TagStyle.swift */; };
 		9476E9866ED878B7E8A57AC2 /* AccountSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD35B8587095E02482466BC /* AccountSearch.swift */; };
 		9AEB0089BBF5603798FF3547 /* DeleteConfirmationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FF1C6BC605904C7E5ADFB69 /* DeleteConfirmationTests.swift */; };
@@ -47,6 +48,7 @@
 		9C24B238923D429C3BC2C413 /* MenuBarIssuerGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7176070C4364B1A9FBF269D /* MenuBarIssuerGroup.swift */; };
 		A2FA9D8DC44B2A368EE153B2 /* AppInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D7870034DCFEF7C7CE52261 /* AppInfo.swift */; };
 		AF409432B44BF07BDB5A9B04 /* AccountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70A129B0D600674D2913C90 /* AccountTests.swift */; };
+		BC0831735CC90CDE93191A7D /* AppPresence.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADA78ABD4D5826F1582226A3 /* AppPresence.swift */; };
 		C08106775B37033E8A4BD09B /* CountdownRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = F35B1ADA6CC3E2A080668CA3 /* CountdownRing.swift */; };
 		C08CA2EF2820FF0A78F25B63 /* StorageLocationSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE7F2F57AE6BE17E4212AD3C /* StorageLocationSupport.swift */; };
 		C876E117D8249647C6FFA967 /* MenuBarTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34CBFE551CE9A1019BF12CD7 /* MenuBarTheme.swift */; };
@@ -101,6 +103,7 @@
 		5EF064FBFAB7481717B07856 /* StorageSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageSettingsView.swift; sourceTree = "<group>"; };
 		7AD1DC3778D1B8493A534350 /* TagStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagStyle.swift; sourceTree = "<group>"; };
 		7C1FA115DCA7679BDAA7781C /* PlaceholderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderTests.swift; sourceTree = "<group>"; };
+		80B8717037F9A5BFD588F8FA /* AppPresenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPresenceTests.swift; sourceTree = "<group>"; };
 		838F4B9523D47873ACDED621 /* AccountOrdering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountOrdering.swift; sourceTree = "<group>"; };
 		8721EB37FE811A68D851301B /* MenuBarList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarList.swift; sourceTree = "<group>"; };
 		88408CF5542FBCAEF73C53B3 /* StorageServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageServiceTests.swift; sourceTree = "<group>"; };
@@ -110,6 +113,7 @@
 		A122F17663D1DEC14E48B8EA /* AccountsWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountsWindowView.swift; sourceTree = "<group>"; };
 		AAB9F25EE332006A0BAC4944 /* AccountOrderingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountOrderingTests.swift; sourceTree = "<group>"; };
 		AB705C1DD7C7B18A51F43252 /* FileWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcher.swift; sourceTree = "<group>"; };
+		ADA78ABD4D5826F1582226A3 /* AppPresence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPresence.swift; sourceTree = "<group>"; };
 		AFE6E8726B3DEB6D32581A0C /* TOTPClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TOTPClock.swift; sourceTree = "<group>"; };
 		B2EEF5DFFA24C86823A21033 /* ScreenSelectionCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenSelectionCapture.swift; sourceTree = "<group>"; };
 		C25FD93D3ACE6329DCABA7CA /* VaultCrypto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultCrypto.swift; sourceTree = "<group>"; };
@@ -208,6 +212,7 @@
 				46016C069008614FE42DEC4C /* AccountSearchTests.swift */,
 				E70A129B0D600674D2913C90 /* AccountTests.swift */,
 				282F63F389212082BB46DC05 /* AddedAccountFocusTests.swift */,
+				80B8717037F9A5BFD588F8FA /* AppPresenceTests.swift */,
 				3464996638F692F2FA67F5FD /* CachingKeyStoreTests.swift */,
 				1FF1C6BC605904C7E5ADFB69 /* DeleteConfirmationTests.swift */,
 				C48CBADBE52699AE8BB50320 /* KeyStoreTests.swift */,
@@ -291,6 +296,7 @@
 				23B046FE453769DFB705BA9E /* Vault */,
 				838F4B9523D47873ACDED621 /* AccountOrdering.swift */,
 				3AD35B8587095E02482466BC /* AccountSearch.swift */,
+				ADA78ABD4D5826F1582226A3 /* AppPresence.swift */,
 				AB705C1DD7C7B18A51F43252 /* FileWatcher.swift */,
 				28125A78D1A9EB9CC08AA638 /* MenuBarExpansion.swift */,
 				8721EB37FE811A68D851301B /* MenuBarList.swift */,
@@ -402,6 +408,7 @@
 				49BE30137F5040511256CFB2 /* AccountsWindowView.swift in Sources */,
 				FCF51A7378F98C134BBD1B5F /* AppDelegate.swift in Sources */,
 				A2FA9D8DC44B2A368EE153B2 /* AppInfo.swift in Sources */,
+				BC0831735CC90CDE93191A7D /* AppPresence.swift in Sources */,
 				C08106775B37033E8A4BD09B /* CountdownRing.swift in Sources */,
 				128B2AA2B01CF60772055C26 /* FileWatcher.swift in Sources */,
 				7408582223DAB7C7F6ECBFE7 /* KeyStore.swift in Sources */,
@@ -438,6 +445,7 @@
 				1E2122670BDA2EAE26911D17 /* AccountSearchTests.swift in Sources */,
 				AF409432B44BF07BDB5A9B04 /* AccountTests.swift in Sources */,
 				77E47F09AF1FF7A662085E71 /* AddedAccountFocusTests.swift in Sources */,
+				8960997CC9CA72B1DA5F0DF3 /* AppPresenceTests.swift in Sources */,
 				6D7EF0368C9D2DADF7BABFB0 /* CachingKeyStoreTests.swift in Sources */,
 				9AEB0089BBF5603798FF3547 /* DeleteConfirmationTests.swift in Sources */,
 				483CC159D01A740D9BFF80F2 /* KeyStoreTests.swift in Sources */,

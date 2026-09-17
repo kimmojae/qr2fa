@@ -38,7 +38,6 @@ targets:
         CFBundleDisplayName: Qr2fa
         CFBundleShortVersionString: "1.0.0"
         CFBundleVersion: "1"
-        LSUIElement: true
         NSHighResolutionCapable: true
         NSPrincipalClass: NSApplication
         NSPrivacyAccessedAPITypes: []

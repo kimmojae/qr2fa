@@ -104,15 +104,24 @@ struct SettingsWindowView: View {
 /// 설정 창의 **일반** 갈래.
 struct GeneralSettingsView: View {
     @Environment(TagStyle.self) private var tagStyle
+    @Environment(AppPresence.self) private var presence
     @State private var startAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
-        Form {
+        @Bindable var presence = presence
+        return Form {
             Section {
                 Toggle("로그인 시 시작", isOn: $startAtLogin)
                     .onChange(of: startAtLogin) { _, newValue in
                         setStartAtLogin(newValue)
                     }
+                // Dock을 끄면 메뉴바 유틸리티가 되고, 메뉴바를 끄면 평범한 앱이 된다.
+                // 둘 다 끌 수는 없으므로, 남은 하나는 비활성으로 잠근다(실제로 거부하는
+                // 것은 `AppPresence`다 — 비활성은 왜 안 되는지 보여주는 쪽이다).
+                Toggle("Dock에 아이콘 표시", isOn: $presence.showsDockIcon)
+                    .disabled(presence.dockIconIsTheLastOne)
+                Toggle("메뉴바에 아이콘 표시", isOn: $presence.showsMenuBarIcon)
+                    .disabled(presence.menuBarIconIsTheLastOne)
                 LabeledContent("태그 색상") { tagColorSwatches }
             }
         }

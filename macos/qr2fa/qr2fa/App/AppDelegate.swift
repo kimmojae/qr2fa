@@ -11,15 +11,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let clock = TOTPClock()
     /// 태그 대표 색. 설정 창에서 고르고 메뉴바가 같이 따라야 하므로 여기서 하나만 만든다.
     let tagStyle = TagStyle()
+    /// 이 앱이 Dock과 메뉴바 중 어디에 보이는지. 활성화 정책을 정하는 곳은 여기 하나뿐이다.
+    let presence = AppPresence()
     /// SwiftUI 쪽에서 주입하는 창 열기 액션(openWindow). 상태바 레이블이 배선한다.
     var presentAccounts: (() -> Void)?
     var presentOnboarding: (() -> Void)?
     /// ⌘,로 여는 설정 창. 메뉴바 패널의 "Settings…"가 배선한다.
     var presentGeneralSettings: (() -> Void)?
-    /// 닫힘을 관찰 중인 창들. 같은 창에 옵저버를 두 번 달지 않으려고 들고 있는다.
-    private var observedWindows = NSHashTable<NSWindow>.weakObjects()
 
-    // 메뉴바 앱이므로 창을 다 닫아도 앱이 종료되면 안 된다.
+    // 창을 다 닫아도 앱이 종료되면 안 된다. 메뉴바 아이콘이 남아 있고, 거기서 코드를
+    // 복사하는 게 이 앱의 일상 동작이다.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }
@@ -29,8 +30,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 기본 동작에 맡기면 AppKit이 예전에 order-out된 창을 전부 다시 앞으로 꺼낸다. 온보딩 창은
     /// `dismissWindow`로 화면에서만 내려간 상태(창 객체는 계속 살아 있다)라, 저장 위치를 이미 고른
     /// 사용자에게도 "MFA 데이터를 어디에 저장할까요?"가 다시 뜬다 — 로그인 항목으로 떠 있는 앱을
-    /// Spotlight에서 켜면 매번 재현된다. 메뉴바 앱에서 재실행의 의미는 설정 창을 보여 달라는
-    /// 것이므로 직접 처리한다.
+    /// Spotlight에서 켜면 매번 재현된다. 재실행의 의미는 계정 창을 보여 달라는 것이므로
+    /// 직접 처리한다.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
         // 아직 위치를 고르지 않았다면 온보딩 창이 앞으로 나오는 게 맞다.
         guard !storageService.needsLocationChoice else { return true }
@@ -48,12 +49,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
+        // 활성화 정책은 설정이 정한다. 창을 열고 닫을 때마다 바꾸지 않는다.
+        presence.apply()
         // 메인 메뉴는 SwiftUI(App 씬)가 표준 구성으로 만든다. 직접 덮어쓰지 않아야
         // Edit 메뉴(cmd+X/C/V)와 Quit(cmd+Q)가 살아있다.
         do { try storageService.load() } catch {
             NSLog("qr2fa: load failed: \(error)")
         }
+        launchedByUser = Self.isUserLaunch(notification)
+    }
+
+    /// 사용자가 직접 실행한 것인지. 로그인 항목으로 떠오른 경우는 거짓이다.
+    ///
+    /// 일반 앱은 실행하면 창이 떠야 하지만, 로그인할 때마다 계정 창이 튀어나오면 안 된다.
+    /// 그건 실행이 아니라 대기다.
+    private(set) var launchedByUser = true
+    private var didPresentLaunchWindow = false
+
+    private static func isUserLaunch(_ notification: Notification) -> Bool {
+        // 이 키가 거짓이면 시스템이 띄운 것이다(로그인 항목, 재개 등). 키가 아예 없는
+        // 경우도 있는데, 그때는 사용자가 실행한 것으로 본다 — 창이 안 뜨는 쪽보다
+        // 뜨는 쪽이 덜 당황스럽다.
+        guard let value = notification.userInfo?[NSApplication.launchIsDefaultUserInfoKey]
+                as? Bool else { return true }
+        return value
     }
 
     /// SwiftUI가 만든 계정 창(3열).
@@ -83,12 +102,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// 저장 위치를 아직 안 골랐으면 온보딩 창을 연다. 배선이 끝난 직후에 불린다.
-    func presentOnboardingIfNeeded() {
-        guard storageService.needsLocationChoice else { return }
+    /// 실행 직후에 무엇을 보여줄지. 배선이 끝난 직후에 불린다.
+    ///
+    /// 저장 위치를 아직 안 골랐으면 온보딩, 아니면 계정 창. 단 로그인 항목으로 떠오른
+    /// 경우에는 아무것도 열지 않는다 — 메뉴바 아이콘만 조용히 자리를 잡는다.
+    func presentLaunchWindow() {
+        // 배선이 두 곳에 있으므로 두 번 불릴 수 있다. 창을 두 번 여는 건 무해하지만,
+        // 온보딩을 이미 닫은 뒤에 다시 띄우는 건 곤란하다.
+        guard !didPresentLaunchWindow else { return }
+        didPresentLaunchWindow = true
+        guard storageService.needsLocationChoice else {
+            if launchedByUser { openAccounts() }
+            return
+        }
         presentOnboarding?()
         DispatchQueue.main.async {
-            NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: true)
             self.onboardingSceneWindow()?.makeKeyAndOrderFront(nil)
         }
@@ -118,7 +146,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // 패널이 닫힌 뒤(다음 런루프) 실행한다.
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            NSApp.setActivationPolicy(.regular)
             open()
             self.finishPresenting(open: open, find: find, name: name, attemptsLeft: 20)
         }
@@ -140,8 +167,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let window = find() else {
             guard attemptsLeft > 0 else {
                 NSLog("qr2fa: \(name) window did not appear")
-                // 창 없이 Dock 아이콘만 남기지 않는다.
-                NSApp.setActivationPolicy(.accessory)
                 return
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
@@ -153,16 +178,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return
         }
-        // 창이 뜬 뒤, 닫힘을 관찰해 다시 액세서리 모드로 돌리고 위치를 보정한다.
-        if !observedWindows.contains(window) {
-            observedWindows.add(window)
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(appWindowWillClose(_:)),
-                name: NSWindow.willCloseNotification,
-                object: window
-            )
-        }
         // toolbarStyle은 건드리지 않는다. `.unified`로 바꿔 두면 SwiftUI가 분할 열마다
         // 나눠 둔 툴바 구역이 창 툴바 하나로 합쳐진다 — 계정 창의 +·검색·편집이 열을
         // 따라가려면 기본값이어야 한다.
@@ -172,18 +187,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-    }
-
-    /// 창 하나가 닫혔다고 바로 액세서리로 돌리면, 계정 창과 설정 창을 같이 띄웠다가 하나만
-    /// 닫았을 때 남은 창이 Dock 아이콘 없이 붕 뜬다. 남아 있는 창이 없을 때만 돌린다.
-    @objc private func appWindowWillClose(_ note: Notification) {
-        let closing = note.object as? NSWindow
-        DispatchQueue.main.async {
-            let stillOpen = NSApp.windows.contains {
-                $0 !== closing && $0.isVisible && $0.canBecomeMain
-            }
-            if !stillOpen { NSApp.setActivationPolicy(.accessory) }
-        }
     }
 
     func runMigration() {
