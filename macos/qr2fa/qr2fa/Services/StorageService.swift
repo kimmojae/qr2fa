@@ -35,7 +35,7 @@ final class StorageService {
         path: String? = nil,
         defaults: UserDefaults = .standard,
         defaultDirectory: String = StorageService.localDefaultDirectory(),
-        keyStore: KeyStore = KeychainKeyStore()
+        keyStore: KeyStore = CachingKeyStore(KeychainKeyStore())
     ) {
         self.defaults = defaults
         self.defaultDirectory = defaultDirectory

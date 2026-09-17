@@ -12,6 +12,38 @@ protocol KeyStore {
     func save(_ key: Data) throws
 }
 
+/// 한 번 꺼낸 키를 메모리에 들고 있는 껍데기.
+///
+/// 키체인 조회는 접근 권한 확인을 동반하고, 앱 신원이 매 빌드마다 바뀌는 자체 서명
+/// 환경에서는 그때마다 사용자에게 묻는 대화상자가 뜬다. 그런데 `StorageService`는 파일을
+/// **읽을 때도 쓸 때도** 키를 꺼내고, 저장 위치가 동기화 폴더면 `FileWatcher`가 외부 변경을
+/// 감지할 때마다 다시 읽는다 — 그래서 묻는 횟수가 파일 활동량만큼 늘어난다.
+///
+/// 키는 세션 중에 바뀌지 않으므로(한 번 만들어지면 그대로다) 첫 조회 결과를 들고 있으면
+/// 실행당 한 번으로 줄어든다. 금고가 열려 있는 동안 키는 어차피 메모리에 있으므로 새로
+/// 노출되는 것도 없다.
+///
+/// 못 찾았거나(`nil`) 거부당한 경우는 캐시하지 않는다 — 사용자가 나중에 허용하면
+/// 그 실행에서도 열릴 수 있어야 한다.
+final class CachingKeyStore: KeyStore {
+    private let wrapped: KeyStore
+    private var cached: Data?
+
+    init(_ wrapped: KeyStore) { self.wrapped = wrapped }
+
+    func load() throws -> Data? {
+        if let cached { return cached }
+        let loaded = try wrapped.load()
+        cached = loaded
+        return loaded
+    }
+
+    func save(_ key: Data) throws {
+        try wrapped.save(key)
+        cached = key
+    }
+}
+
 final class InMemoryKeyStore: KeyStore {
     private var key: Data?
     init(key: Data? = nil) { self.key = key }
