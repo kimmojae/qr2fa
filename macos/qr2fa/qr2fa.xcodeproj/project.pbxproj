@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		00BE6FF4D0EF6155C2958207 /* QRScannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4781F45EB3B937095BB61484 /* QRScannerTests.swift */; };
+		039049ADD8985D30C18B7F92 /* WindowVisibilityReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB586704B45A157B8AA97003 /* WindowVisibilityReader.swift */; };
 		059EB15B7AFEEB0AB286C211 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E55E50489931E956CD012135 /* OnboardingView.swift */; };
 		05D51B269ABE036A6F355C5E /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4506FFA3EC262CFA7C739475 /* StorageService.swift */; };
 		05FBD8B8E37FA8E0A15641D4 /* StorageSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EF064FBFAB7481717B07856 /* StorageSettingsView.swift */; };
@@ -135,6 +136,7 @@
 		F0C7D43B89861E28DBD9C096 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F35B1ADA6CC3E2A080668CA3 /* CountdownRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountdownRing.swift; sourceTree = "<group>"; };
 		F65616B3015843F56778E08D /* TagBadgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagBadgeView.swift; sourceTree = "<group>"; };
+		FB586704B45A157B8AA97003 /* WindowVisibilityReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowVisibilityReader.swift; sourceTree = "<group>"; };
 		FFDD44328F364C39D1148364 /* qr2faTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = qr2faTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -200,6 +202,7 @@
 				D7176070C4364B1A9FBF269D /* MenuBarIssuerGroup.swift */,
 				2382F079A5CF0DAC99E33DF0 /* MenuBarPanelView.swift */,
 				34CBFE551CE9A1019BF12CD7 /* MenuBarTheme.swift */,
+				FB586704B45A157B8AA97003 /* WindowVisibilityReader.swift */,
 			);
 			path = MenuBar;
 			sourceTree = "<group>";
@@ -432,6 +435,7 @@
 				F85AB1C8D42F56F82CD48629 /* TagBadgeView.swift in Sources */,
 				8BFB1A2EA4991501B34E47E3 /* TagStyle.swift in Sources */,
 				2BE5D7C4CCC9581757733EC8 /* VaultCrypto.swift in Sources */,
+				039049ADD8985D30C18B7F92 /* WindowVisibilityReader.swift in Sources */,
 				CE6043988BF08494C558F41D /* qr2faApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

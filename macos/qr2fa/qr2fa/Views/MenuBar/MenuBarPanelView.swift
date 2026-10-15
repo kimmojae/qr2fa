@@ -17,7 +17,13 @@ struct MenuBarPanelView: View {
     let openGeneralSettings: () -> Void
     let runMigration: () -> Void
 
-    private var now: Date { clock.now }
+    /// 패널이 화면에 있을 때만 시계를 읽는다. 읽지 않으면 Observation이 이 뷰를 시계에
+    /// 묶지 않으므로, 닫힌 패널은 매초 다시 그려지지 않는다 — 이유는 `WindowVisibilityReader`.
+    @State private var isVisible = true
+    /// 닫혀 있는 동안 보여 줄(실제로는 아무도 보지 않는) 고정 시각.
+    @State private var hiddenNow = Date()
+
+    private var now: Date { isVisible ? clock.now : hiddenNow }
 
     private var accounts: [Account] { storageService.accounts }
     private var groups: [MenuBarGroup] { MenuBarList.groups(for: accounts) }
@@ -35,9 +41,24 @@ struct MenuBarPanelView: View {
         // HurryPorter 팝오버(`PopoverView`)와 같은 값. 둘 다 메뉴바에 사는 앱이라 번갈아
         // 열면 폭 차이가 바로 눈에 걸리는데, 그 차이에 담을 뜻이 없다.
         .frame(width: 340)
+        .background(WindowVisibilityReader(isVisible: visibility))
         .onAppear {
             expansion.prune(keeping: AccountOrdering.issuers(in: accounts))
         }
+    }
+
+    /// 다시 열릴 때는 애니메이션 없이 지금 시각으로 건너뛴다. 그러지 않으면 닫힐 때 멈춘
+    /// 자리에서 지금 자리까지 링이 1초 동안 쓸고 지나간다.
+    private var visibility: Binding<Bool> {
+        Binding(
+            get: { isVisible },
+            set: { visible in
+                if !visible { hiddenNow = clock.now }
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) { isVisible = visible }
+            }
+        )
     }
 
     // MARK: - Header
