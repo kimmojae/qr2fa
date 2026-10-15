@@ -35,12 +35,6 @@ struct AccountsWindowView: View {
     @State private var isEditingAccount: Bool = false
     @State private var scrollTarget: Int?
     @State private var searchText = ""
-    /// 상세 열의 인증 코드와 남은 시간 링이 쓰는 "지금". 앱 전체가 시계 하나를 나눠 쓴다 —
-    /// 메뉴바 패널과 나란히 띄웠을 때 남은 시간이 어긋나면 안 된다.
-    @Environment(TOTPClock.self) private var clock
-
-    private var now: Date { clock.now }
-
     private var issuers: [String] {
         AccountOrdering.issuers(in: storageService.accounts)
     }
@@ -129,7 +123,7 @@ struct AccountsWindowView: View {
                     .toolbar { listToolbar }
                 } detail: {
                     if let account = selectedAccount {
-                        AccountDetailView(account: account, now: now, isEditing: $isEditingAccount) {
+                        AccountDetailView(account: account, isEditing: $isEditingAccount) {
                             selectedAccountID = nil
                             isEditingAccount = false
                         }

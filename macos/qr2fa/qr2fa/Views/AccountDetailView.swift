@@ -4,10 +4,6 @@ import CoreImage.CIFilterBuiltins
 
 struct AccountDetailView: View {
     let account: Account
-    /// 1초에 한 번 갱신되는 "지금". 예전엔 이 뷰가 자기 타이머를 돌렸는데, 목록 툴바의
-    /// 링도 따로 돌고 있어서 시작 시점이 달라 둘이 1초 안쪽으로 어긋나 보였다. 시계를
-    /// 하나로 모아 같은 값에서 파생시킨다.
-    let now: Date
     @Binding var isEditing: Bool
     var onDelete: () -> Void = {}
 
@@ -33,16 +29,6 @@ struct AccountDetailView: View {
     /// 복사 표시가 떠 있는 시간. 메뉴바 패널(1.5초)보다 길게 둔다 — 거긴 복사하고 바로
     /// 떠나는 자리지만, 설정 창은 머무는 화면이라 금방 사라지면 본 것 같지도 않다.
     private static let copiedDuration: TimeInterval = 2.0
-
-    /// 코드와 남은 시간은 `now` 하나에서만 파생된다 — 저장된 상태가 아니라서 툴바 링과
-    /// 어긋날 수가 없다.
-    private var totpCode: String {
-        (try? TOTPGenerator.generate(account: account, date: now)) ?? "------"
-    }
-
-    private var remaining: Int {
-        TOTPGenerator.remainingSeconds(date: now, period: account.period)
-    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -320,17 +306,7 @@ struct AccountDetailView: View {
     }
 
     private var codeContent: some View {
-        HStack(spacing: 10) {
-            CountdownRing(remaining: remaining, period: account.period)
-                .frame(width: 15, height: 15)
-
-            Text(TOTPGenerator.formattedCode(totpCode))
-                // 다른 줄과 같은 크기 — 혼자 크면 줄 높이가 어긋난다.
-                .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                // 코드가 갱신된 게 눈에 걸려야 한다. 자리별로 숫자가 굴러가며 바뀐다.
-                .contentTransition(.numericText())
-                .animation(.smooth(duration: 0.35), value: totpCode)
-        }
+        LiveCodeView(account: account)
     }
 
     private var copiedContent: some View {
@@ -375,7 +351,7 @@ struct AccountDetailView: View {
     private func copyCode() {
         // 표시용 값이 아니라 누른 순간의 코드를 복사한다 — 틱 사이에 눌리면 한 주기
         // 지난 코드가 복사될 수 있다.
-        let code = (try? TOTPGenerator.generate(account: account, date: Date())) ?? totpCode
+        guard let code = try? TOTPGenerator.generate(account: account, date: Date()) else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(code, forType: .string)
         showCopied = true
@@ -471,5 +447,33 @@ enum DeleteConfirmation {
         let warning = "되돌릴 수 없습니다. 이 계정의 인증 코드를 다시 쓰려면 QR을 새로 등록해야 합니다."
         guard !identity.isEmpty else { return warning }
         return identity.joined(separator: " · ") + "\n\n" + warning
+    }
+}
+
+/// 인증 코드와 남은 시간 링. 시계를 읽는 건 **이 뷰뿐**이다.
+///
+/// 예전엔 계정 창이 맨 위에서 시계를 읽어 상세로 내려 줬는데, 그러면 매초 사이드바·목록·
+/// 상세 폼까지 창 전체가 다시 계산된다. 1초마다 바뀌는 건 이 한 줄이므로 시계 구독도
+/// 여기서 끝낸다. 시계는 앱 전체가 하나를 나눠 쓴다 — 메뉴바 패널과 나란히 띄웠을 때
+/// 남은 시간이 어긋나면 안 된다.
+private struct LiveCodeView: View {
+    let account: Account
+    @Environment(TOTPClock.self) private var clock
+
+    var body: some View {
+        let now = clock.now
+        let code = (try? TOTPGenerator.generate(account: account, date: now)) ?? "------"
+        HStack(spacing: 10) {
+            CountdownRing(remaining: TOTPGenerator.remainingSeconds(date: now, period: account.period),
+                          period: account.period)
+                .frame(width: 15, height: 15)
+
+            Text(TOTPGenerator.formattedCode(code))
+                // 다른 줄과 같은 크기 — 혼자 크면 줄 높이가 어긋난다.
+                .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                // 코드가 갱신된 게 눈에 걸려야 한다. 자리별로 숫자가 굴러가며 바뀐다.
+                .contentTransition(.numericText())
+                .animation(.smooth(duration: 0.35), value: code)
+        }
     }
 }
